@@ -1,17 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-/// أنواع الحركات الجسدية
-enum BodyAnimationType {
-  idle,           // وقوف عادي
-  breathing,      // تنفس
-  thrusting,      // إيلاج
-  receiving,      // تلقي
-  climaxing,      // ذروة
-  recovering,     // استعادة
-}
+enum BodyAnimationType { idle, breathing, thrusting, receiving, climaxing, recovering }
 
-/// إطار حركة مخصص
 class AnimationKeyframe {
   final double time;
   final double hipAngle;
@@ -32,7 +23,6 @@ class AnimationKeyframe {
   });
 }
 
-/// مسار حركي كامل
 class AnimationSequence {
   final BodyAnimationType type;
   final List<AnimationKeyframe> keyframes;
@@ -47,7 +37,6 @@ class AnimationSequence {
   });
 }
 
-/// متحكم الحركة الجسدية
 class BodyAnimationController extends ChangeNotifier {
   BodyAnimationType _currentType = BodyAnimationType.idle;
   AnimationSequence? _currentSequence;
@@ -56,7 +45,6 @@ class BodyAnimationController extends ChangeNotifier {
   bool _isPlaying = false;
   double _blendFactor = 0;
 
-  // القيم الحالية للحركة
   double _hipAngle = 0;
   double _spineCurve = 0;
   double _shoulderTilt = 0;
@@ -64,16 +52,13 @@ class BodyAnimationController extends ChangeNotifier {
   double _mouthOpen = 0;
   double _eyeSquint = 0;
 
-  // التسلسلات الحركية المبنية مسبقًا
   final Map<BodyAnimationType, AnimationSequence> _sequences = {};
 
   BodyAnimationController() {
     _buildDefaultSequences();
   }
 
-  /// بناء التسلسلات الحركية الافتراضية
   void _buildDefaultSequences() {
-    // تسلسل التنفس
     _sequences[BodyAnimationType.breathing] = AnimationSequence(
       type: BodyAnimationType.breathing,
       duration: 4.0,
@@ -85,7 +70,6 @@ class BodyAnimationController extends ChangeNotifier {
       ],
     );
 
-    // تسلسل الإيلاج
     _sequences[BodyAnimationType.thrusting] = AnimationSequence(
       type: BodyAnimationType.thrusting,
       duration: 0.5,
@@ -97,7 +81,6 @@ class BodyAnimationController extends ChangeNotifier {
       ],
     );
 
-    // تسلسل التلقي
     _sequences[BodyAnimationType.receiving] = AnimationSequence(
       type: BodyAnimationType.receiving,
       duration: 0.5,
@@ -109,7 +92,6 @@ class BodyAnimationController extends ChangeNotifier {
       ],
     );
 
-    // تسلسل الذروة
     _sequences[BodyAnimationType.climaxing] = AnimationSequence(
       type: BodyAnimationType.climaxing,
       duration: 3.0,
@@ -123,7 +105,6 @@ class BodyAnimationController extends ChangeNotifier {
       ],
     );
 
-    // تسلسل الاستعادة
     _sequences[BodyAnimationType.recovering] = AnimationSequence(
       type: BodyAnimationType.recovering,
       duration: 5.0,
@@ -136,10 +117,8 @@ class BodyAnimationController extends ChangeNotifier {
     );
   }
 
-  /// تشغيل نوع حركة
   void play(BodyAnimationType type, {double speed = 1.0}) {
     if (_currentType == type && _isPlaying) return;
-    
     _currentType = type;
     _currentSequence = _sequences[type];
     _currentTime = 0;
@@ -149,23 +128,16 @@ class BodyAnimationController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// إيقاف الحركة
   void stop() {
     _isPlaying = false;
     notifyListeners();
   }
 
-  /// التبديل إلى وضع الخمول
-  void idle() {
-    play(BodyAnimationType.idle);
-  }
+  void idle() => play(BodyAnimationType.idle);
 
-  /// تحديث الحركة
   void update(double deltaTime) {
     if (!_isPlaying || _currentSequence == null) return;
-
     _currentTime += deltaTime * _speedMultiplier;
-
     if (_currentTime >= _currentSequence!.duration) {
       if (_currentSequence!.loops) {
         _currentTime = 0;
@@ -176,26 +148,16 @@ class BodyAnimationController extends ChangeNotifier {
         return;
       }
     }
-
     _blendFactor = (_blendFactor + deltaTime * 5).clamp(0.0, 1.0);
     _interpolateKeyframes();
     notifyListeners();
   }
 
-  /// استيفاء الإطارات المفتاحية
   void _interpolateKeyframes() {
     if (_currentSequence == null || _currentSequence!.keyframes.isEmpty) return;
-
     final keyframes = _currentSequence!.keyframes;
-    if (keyframes.length == 1) {
-      _applyKeyframe(keyframes.first);
-      return;
-    }
-
-    // إيجاد الإطارين المحيطين بالوقت الحالي
-    AnimationKeyframe? prev;
-    AnimationKeyframe? next;
-
+    if (keyframes.length == 1) { _applyKeyframe(keyframes.first); return; }
+    AnimationKeyframe? prev, next;
     for (int i = 0; i < keyframes.length - 1; i++) {
       if (_currentTime >= keyframes[i].time && _currentTime <= keyframes[i + 1].time) {
         prev = keyframes[i];
@@ -203,15 +165,9 @@ class BodyAnimationController extends ChangeNotifier {
         break;
       }
     }
-
-    if (prev == null || next == null) {
-      _applyKeyframe(keyframes.last);
-      return;
-    }
-
+    if (prev == null || next == null) { _applyKeyframe(keyframes.last); return; }
     final segmentDuration = next.time - prev.time;
     final t = segmentDuration > 0 ? (_currentTime - prev.time) / segmentDuration : 0;
-
     _hipAngle = _lerp(prev.hipAngle, next.hipAngle, t);
     _spineCurve = _lerp(prev.spineCurve, next.spineCurve, t);
     _shoulderTilt = _lerp(prev.shoulderTilt, next.shoulderTilt, t);
@@ -231,7 +187,6 @@ class BodyAnimationController extends ChangeNotifier {
 
   double _lerp(double a, double b, double t) => a + (b - a) * t;
 
-  // Getters
   BodyAnimationType get currentType => _currentType;
   bool get isPlaying => _isPlaying;
   double get hipAngle => _hipAngle * _blendFactor;
@@ -243,13 +198,11 @@ class BodyAnimationController extends ChangeNotifier {
   double get currentTime => _currentTime;
   double get speedMultiplier => _speedMultiplier;
 
-  /// ضبط سرعة الحركة
   void setSpeed(double speed) {
     _speedMultiplier = speed.clamp(0.1, 5.0);
     notifyListeners();
   }
 
-  /// إضافة تسلسل مخصص
   void addCustomSequence(AnimationSequence sequence) {
     _sequences[sequence.type] = sequence;
   }

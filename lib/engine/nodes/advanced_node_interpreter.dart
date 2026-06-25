@@ -12,14 +12,12 @@ class AdvancedNodeInterpreter {
     "Emit Cum": 2500, "Shake Camera": 800, "Play Seq": 5000,
     "Moan": 1500, "Scream": 4000,
   };
-  final Function(String)? onPlaySequence;
   final SpatialAudioEngine _audioEngine = SpatialAudioEngine();
 
   AdvancedNodeInterpreter({
     required SimulationProvider simProvider,
     required List<AdvancedNodeData> nodes,
     required List<NodeWire> wires,
-    this.onPlaySequence,
   })  : _simProvider = simProvider, _nodes = nodes, _wires = wires {
     _audioEngine.init();
   }
@@ -55,19 +53,16 @@ class AdvancedNodeInterpreter {
     }
     _lastFiredTime[nodeId] = now;
     switch (label) {
-      case "Emit Cum": print("💦 Emitting Cum!"); break;
-      case "Shake Camera": print("📳 Shaking Camera!"); break;
-      case "Play Seq": onPlaySequence?.call(actionNode.internalValues['seq_id']?.toString() ?? '0'); break;
+      case "Emit Cum": break;
+      case "Shake Camera": break;
+      case "Play Seq": break;
       case "Moan":
         final vol = (actionNode.internalValues['volume'] ?? 0.8).toDouble();
-        _audioEngine.playMoan(vol, speed);
-        print("🔊 Playing Moan (vol: $vol)");
+        _audioEngine.playMoan(volume: vol, speed: speed);
         break;
       case "Scream":
         _audioEngine.playScream();
-        print("🗣️ Playing Scream!");
         break;
-      default: print("❓ Unknown action: $label");
     }
   }
 

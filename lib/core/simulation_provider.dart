@@ -1,57 +1,44 @@
 import 'package:flutter/material.dart';
 
-enum SimulationState { idle, active, peak, exhausted }
+enum SimulationState { idle, active, peak, recovering }
 
-class SimulationProvider with ChangeNotifier {
-  SimulationState _currentState = SimulationState.idle;
-  double _arousal = 0.0;
-  double _stamina = 100.0;
-  double _thrustSpeed = 20.0;
-  double _thrustDepth = 30.0;
-  String _currentPosition = "Missionary";
-  String _partnerName = "Elena";
-  String _currentTime = "22:00";
+class SimulationProvider extends ChangeNotifier {
+  double _arousal = 0;
+  double _thrustSpeed = 0;
+  double _thrustDepth = 0;
+  String _currentPosition = 'missionary';
   bool _autoMode = false;
+  SimulationState _currentState = SimulationState.idle;
+  double _time = 0;
 
-  SimulationState get currentState => _currentState;
   double get arousal => _arousal;
-  double get stamina => _stamina;
   double get thrustSpeed => _thrustSpeed;
   double get thrustDepth => _thrustDepth;
   String get currentPosition => _currentPosition;
-  String get partnerName => _partnerName;
-  String get currentTime => _currentTime;
   bool get autoMode => _autoMode;
-
-  // دوال جديدة للتحكم التلقائي (للمسجل)
-  void setAutoMode(bool v) { _autoMode = v; notifyListeners(); }
-  void setSpeedDirect(double v) { _thrustSpeed = v.clamp(0.0, 100.0); }
-  void setDepthDirect(double v) { _thrustDepth = v.clamp(0.0, 100.0); }
-
-  void increaseSpeed() { _thrustSpeed = (_thrustSpeed + 10.0).clamp(0.0, 100.0); notifyListeners(); }
-  void decreaseSpeed() { _thrustSpeed = (_thrustSpeed - 10.0).clamp(0.0, 100.0); notifyListeners(); }
-  void increaseDepth() { _thrustDepth = (_thrustDepth + 10.0).clamp(0.0, 100.0); notifyListeners(); }
-  void decreaseDepth() { _thrustDepth = (_thrustDepth - 10.0).clamp(0.0, 100.0); notifyListeners(); }
-  void changePosition(String pos) { _currentPosition = pos; notifyListeners(); }
+  SimulationState get currentState => _currentState;
 
   void update(double delta) {
-    double effort = (_thrustSpeed * 0.4) + (_thrustDepth * 0.6);
-    if (_currentState == SimulationState.exhausted) {
-      _stamina = (_stamina + 8.0 * delta).clamp(0.0, 100.0);
-      _arousal = (_arousal - 12.0 * delta).clamp(0.0, 100.0);
-      if (_stamina >= 40.0) _currentState = SimulationState.idle;
-    } else if (effort > 10.0) {
-      double growthModifier = 1.0 + (_arousal * 0.015);
-      _arousal = (_arousal + effort * 0.02 * growthModifier * delta).clamp(0.0, 100.0);
-      _stamina = (_stamina - effort * 0.05 * (1.0 + _thrustSpeed * 0.01) * delta).clamp(0.0, 100.0);
-    } else {
-      _arousal = (_arousal - 3.0 * delta).clamp(0.0, 100.0);
-      _stamina = (_stamina + 2.0 * delta).clamp(0.0, 100.0);
+    _time += delta;
+    if (_autoMode) {
+      _thrustSpeed = 30 + 40 * (_time % 5) / 5;
+      _thrustDepth = 50 + 30 * (_time % 3) / 3;
     }
-    if (_stamina <= 0) _currentState = SimulationState.exhausted;
-    else if (_arousal >= 90) _currentState = SimulationState.peak;
-    else if (_arousal > 20) _currentState = SimulationState.active;
-    else _currentState = SimulationState.idle;
-    if (!_autoMode) notifyListeners();
+    _arousal = (_arousal + _thrustSpeed * delta * 0.01).clamp(0.0, 100.0);
+    if (_arousal > 90) {
+      _currentState = SimulationState.peak;
+    } else if (_arousal > 30) {
+      _currentState = SimulationState.active;
+    } else if (_arousal > 5) {
+      _currentState = SimulationState.recovering;
+    } else {
+      _currentState = SimulationState.idle;
+    }
+    notifyListeners();
   }
+
+  void setSpeedDirect(double speed) => _thrustSpeed = speed.clamp(0, 100);
+  void setDepthDirect(double depth) => _thrustDepth = depth.clamp(0, 100);
+  void changePosition(String pos) => _currentPosition = pos;
+  void setAutoMode(bool mode) => _autoMode = mode;
 }

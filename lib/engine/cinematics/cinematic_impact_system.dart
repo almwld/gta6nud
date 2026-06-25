@@ -19,7 +19,7 @@ class CinematicImpactSystem extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         border: Border.all(
-          color: currentState == "peak" 
+          color: currentState == "peak"
               ? const Color(0xFFFF2A6D).withOpacity(intensity)
               : Colors.transparent,
           width: 5.0 * intensity,

@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'core/simulation_provider.dart';
-import 'core/pleasure_manager.dart';
-import 'engine/engine_integrator.dart';
-import 'engine/body/body_renderer.dart';
-import 'engine/body/body_animation_controller.dart';
-import 'engine/body/body_physics_controller.dart';
-import 'ui/home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:gta6hub/core/simulation_provider.dart';
+import 'package:gta6hub/ui/home_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => SimulationProvider()),
-      ],
+    ChangeNotifierProvider(
+      create: (_) => SimulationProvider(),
       child: const GTA6App(),
     ),
   );
@@ -22,27 +17,18 @@ void main() {
 
 class GTA6App extends StatelessWidget {
   const GTA6App({Key? key}) : super(key: key);
-  
+
   @override
   Widget build(BuildContext context) {
-    // بناء المحرك الموحد
-    final engine = EngineIntegrator(
-      manager: PleasureManager(),
-      renderer: BodyRenderer(),
-      animation: BodyAnimationController(),
-      physics: BodyPhysicsController(),
-    );
-
     return MaterialApp(
-      title: 'gta6hub',
+      title: 'GTA6HUB',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0A0A0F),
         primaryColor: const Color(0xFFFF2A6D),
+        scaffoldBackgroundColor: const Color(0xFF050508),
       ),
-      // نمرر المحرك الآن إلى الواجهة
-      home: HomeScreen(engine: engine),
+      home: const HomeScreen(),
     );
   }
 }

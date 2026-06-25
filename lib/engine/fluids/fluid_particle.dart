@@ -1,19 +1,15 @@
-import 'dart:ui';
+import 'package:flutter/material.dart';
 
 class FluidParticle {
   Offset position;
   Offset velocity;
+  double size;
   double life;
-  double radius;
-  double viscosity;
-  Color color;
 
   FluidParticle({
     required this.position,
     required this.velocity,
-    required this.life,
-    required this.radius,
-    required this.viscosity,
-    required this.color,
+    this.size = 3.0,
+    this.life = 1.0,
   });
 }
