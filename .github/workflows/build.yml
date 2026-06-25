@@ -25,6 +25,11 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: 🛠️ Regenerate Android Shell
+        run: |
+          rm -rf android
+          flutter create --platforms=android .
+
       - name: 🧬 Create Placeholder Assets
         run: |
           echo "🔄 Creating placeholder assets..."
