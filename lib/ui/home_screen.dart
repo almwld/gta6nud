@@ -7,7 +7,6 @@ import 'package:gta6hub/engine/fluids/fluid_emitter.dart';
 import 'package:gta6hub/engine/cinematics/motion_recorder.dart';
 import 'package:gta6hub/ui/gta_hud.dart';
 import 'package:gta6hub/ui/director_sandbox.dart';
-import 'dart:math';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -22,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final MotionRecorder _motionRecorder = MotionRecorder();
   SimulationState _lastState = SimulationState.idle;
   double _time = 0;
+  final Size _screenSize = const Size(400, 800); // حجم افتراضي
 
   @override
   void initState() {
@@ -31,7 +31,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       double delta = elapsed.inMilliseconds / 1000.0;
       _time += delta;
       sim.update(delta);
-      _fluidSimulator.update(delta);
+      
+      // تحديث السوائل مع حجم الشاشة الفعلي
+      _fluidSimulator.update(delta, screenSize: MediaQuery.of(context).size);
+      
       if (sim.currentState == SimulationState.peak && _lastState != SimulationState.peak) {
         final origin = Offset(MediaQuery.of(context).size.width / 2, MediaQuery.of(context).size.height / 2);
         _fluidSimulator.emitParticles(_fluidEmitter.emitCum(origin, const Offset(0, -1), (sim.thrustSpeed / 50).clamp(0.5, 2.0)));
@@ -76,6 +79,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   shaderCallback: (bounds) => const LinearGradient(colors: [Color(0xFFFF2A6D), Color(0xFF00D4FF)]).createShader(bounds),
                   child: const Text('GTA6HUB', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 12, color: Colors.white)),
                 ),
+                const SizedBox(height: 40),
+                // أزرار تحكم سريعة
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _controlButton('Speed +', () => sim.setSpeedDirect((sim.thrustSpeed + 10).clamp(0, 100))),
+                    const SizedBox(width: 10),
+                    _controlButton('Speed -', () => sim.setSpeedDirect((sim.thrustSpeed - 10).clamp(0, 100))),
+                    const SizedBox(width: 20),
+                    _controlButton('Depth +', () => sim.setDepthDirect((sim.thrustDepth + 10).clamp(0, 100))),
+                    const SizedBox(width: 10),
+                    _controlButton('Depth -', () => sim.setDepthDirect((sim.thrustDepth - 10).clamp(0, 100))),
+                  ],
+                ),
               ],
             ),
           ),
@@ -92,6 +109,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _controlButton(String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFF2A6D).withOpacity(0.2),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFFF2A6D).withOpacity(0.5)),
+        ),
+        child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
       ),
     );
   }
