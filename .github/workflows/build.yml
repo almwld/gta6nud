@@ -8,6 +8,7 @@ jobs:
   build:
     name: 🚀 Build Android APK
     runs-on: ubuntu-latest
+
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -29,7 +30,10 @@ jobs:
           rm -rf android
           flutter create --platforms=android .
 
-      - name: 🧬 Create Assets
+      - name: 🖼️ Generate Launcher Icons
+        run: flutter pub run flutter_launcher_icons:main
+
+      - name: 🧬 Create Placeholder Assets
         run: |
           mkdir -p assets/body/skins assets/body/models assets/body/animations assets/audio assets/icons assets/images assets/fonts
           touch assets/body/skins/default_skin.png
