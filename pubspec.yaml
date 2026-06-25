@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  provider: ^6.0.5
+  shared_preferences: ^2.2.0
+  audioplayers: ^5.2.1
   flutter_launcher_icons: ^0.13.1
 
 dev_dependencies:
@@ -24,6 +27,7 @@ flutter:
     - assets/images/
     - assets/fonts/
     - assets/icon-gta6hub.png
+    - assets/audio/
 
 flutter_launcher_icons:
   android: true
