@@ -1,4 +1,4 @@
-name: 🔥 Prometheus CI/CD - 8K Body Assets
+name: 🔥 Prometheus CI/CD - Clean Build
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    name: 🚀 Build with 8K Body Libraries
+    name: 🚀 Build Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -25,8 +25,9 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: 🧬 Create Assets Structure
+      - name: 🧬 Create Placeholder Assets
         run: |
+          echo "🔄 Creating placeholder assets..."
           mkdir -p assets/body/skins
           mkdir -p assets/body/models
           mkdir -p assets/body/animations
@@ -34,84 +35,24 @@ jobs:
           mkdir -p assets/icons
           mkdir -p assets/images
           mkdir -p assets/fonts
-          echo "✅ Assets structure created"
+          
+          touch assets/body/skins/default_skin.png
+          touch assets/body/models/default_body.obj
+          touch assets/body/animations/default_sprite.png
+          
+          touch assets/audio/heartbeat.mp3
+          touch assets/audio/breathing.mp3
+          touch assets/audio/ambient.mp3
+          touch assets/audio/moan_low.mp3
+          touch assets/audio/moan_high.mp3
+          touch assets/audio/scream.mp3
+          touch assets/audio/wet.mp3
+          
+          touch assets/icon-gta6hub.png
+          
+          echo "✅ Placeholder assets created"
 
-      - name: 🧬 Download MakeHuman Body Library
-        run: |
-          echo "📥 Downloading MakeHuman assets..."
-          git clone --depth 1 https://github.com/makehumancommunity/makehuman.git temp_makehuman
-          cp -r temp_makehuman/data/body/* assets/body/models/ 2>/dev/null || echo "⚠️ No body models found"
-          cp -r temp_makehuman/data/skins/* assets/body/skins/ 2>/dev/null || echo "⚠️ No skins found"
-          rm -rf temp_makehuman
-          echo "✅ MakeHuman library integrated"
-
-      - name: 🧬 Download MB-Lab (Blender Body Assets)
-        run: |
-          echo "📥 Downloading Manuel Bastioni Lab..."
-          git clone --depth 1 https://github.com/animate1978/MB-Lab.git temp_mblab
-          cp -r temp_mblab/data/body/* assets/body/models/ 2>/dev/null || echo "⚠️ No MB-Lab models found"
-          cp -r temp_mblab/textures/* assets/body/skins/ 2>/dev/null || echo "⚠️ No MB-Lab textures found"
-          rm -rf temp_mblab
-          echo "✅ MB-Lab library integrated"
-
-      - name: 🧬 Download 8K Skin Textures
-        run: |
-          echo "📥 Downloading 8K PBR textures..."
-          git clone --depth 1 https://github.com/almwld/gta6hub-assets.git temp_custom_assets
-          cp -r temp_custom_assets/skins/* assets/body/skins/ 2>/dev/null || echo "⚠️ No custom skins"
-          cp -r temp_custom_assets/models/* assets/body/models/ 2>/dev/null || echo "⚠️ No custom models"
-          cp -r temp_custom_assets/animations/* assets/body/animations/ 2>/dev/null || echo "⚠️ No custom animations"
-          cp -r temp_custom_assets/audio/* assets/audio/ 2>/dev/null || echo "⚠️ No custom audio"
-          rm -rf temp_custom_assets
-          echo "✅ Custom assets library integrated"
-
-      - name: 🧬 Download Open3D Human Models
-        run: |
-          echo "📥 Downloading Open3D human references..."
-          git clone --depth 1 https://github.com/isl-org/Open3D.git temp_open3d
-          cp -r temp_open3d/examples/test_data/* assets/body/models/ 2>/dev/null || echo "⚠️ No Open3D test data"
-          rm -rf temp_open3d
-          echo "✅ Open3D library integrated"
-
-      - name: 🧬 Download Character Creator References
-        run: |
-          echo "📥 Downloading Character Creator assets..."
-          git clone --depth 1 https://github.com/character-creator/cc-assets.git temp_cc 2>/dev/null || echo "⚠️ CC assets repo not accessible (may be private)"
-          if [ -d "temp_cc" ]; then
-            cp -r temp_cc/* assets/body/ 2>/dev/null || echo "⚠️ No CC assets"
-            rm -rf temp_cc
-          fi
-          echo "✅ Character Creator check complete"
-
-      - name: 🧬 Generate Placeholder Assets (Fallback)
-        run: |
-          echo "🔄 Generating fallback assets..."
-          if [ -z "$(ls -A assets/body/skins 2>/dev/null)" ]; then
-            echo "⚠️ No skins found, creating placeholder"
-            # إنشاء نسيج جلدي افتراضي
-            touch assets/body/skins/default_skin.txt
-          fi
-          if [ -z "$(ls -A assets/body/models 2>/dev/null)" ]; then
-            echo "⚠️ No models found, creating placeholder"
-            touch assets/body/models/default_body.txt
-          fi
-          if [ -z "$(ls -A assets/audio 2>/dev/null)" ]; then
-            echo "⚠️ No audio found, creating placeholder"
-            touch assets/audio/.gitkeep
-          fi
-          echo "✅ Fallback assets ready"
-
-      - name: 📋 Verify Assets
-        run: |
-          echo "=== ASSETS VERIFICATION ==="
-          echo "Skins: $(find assets/body/skins -type f 2>/dev/null | wc -l) files"
-          echo "Models: $(find assets/body/models -type f 2>/dev/null | wc -l) files"
-          echo "Animations: $(find assets/body/animations -type f 2>/dev/null | wc -l) files"
-          echo "Audio: $(find assets/audio -type f 2>/dev/null | wc -l) files"
-          echo "Icons: $(find assets/icons -type f 2>/dev/null | wc -l) files"
-          echo "=========================="
-
-      - name: 📦 Install Flutter Dependencies
+      - name: 📦 Install Dependencies
         run: flutter pub get
 
       - name: 🛠️ Build Release APK
