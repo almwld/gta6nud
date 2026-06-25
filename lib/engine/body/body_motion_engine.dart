@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'package:flutter/material.dart';
 import 'package:gta6hub/engine/core/advanced_curves.dart';
 
 class MotionState {
@@ -68,9 +67,7 @@ class BodyMotionEngine {
     }
 
     _state.heartbeatStrength = 0.1 + _arousal * 0.8;
-    if (_isInOrgasm) {
-      _state.heartbeatStrength = 1.0;
-    }
+    if (_isInOrgasm) _state.heartbeatStrength = 1.0;
 
     final erectionTarget = AdvancedCurves.erectionCurve(_arousal);
     _state.erectionAngle = -pi * 0.4 * erectionTarget;
@@ -84,9 +81,7 @@ class BodyMotionEngine {
   }
 
   double get breathOffset {
-    if (_isInOrgasm) {
-      return AdvancedCurves.orgasmCurve(_orgasmTime, _orgasmDuration) * _state.breathAmplitude;
-    }
+    if (_isInOrgasm) return AdvancedCurves.orgasmCurve(_orgasmTime, _orgasmDuration) * _state.breathAmplitude;
     return AdvancedCurves.breathCurve(_time, _state.breathRate) * _state.breathAmplitude;
   }
 
@@ -95,8 +90,7 @@ class BodyMotionEngine {
   double get erectionAngle => _state.erectionAngle;
   double get erectionPulse {
     final base = 1.0 + _state.erectionThrob;
-    final hb = heartbeatPulse * 0.05 * _arousal;
-    return base + hb;
+    return base + heartbeatPulse * 0.05 * _arousal;
   }
   double get hipSway => _state.hipSway;
   double get spineCurve => _state.spineCurve;
