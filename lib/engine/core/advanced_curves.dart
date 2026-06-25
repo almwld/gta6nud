@@ -25,7 +25,7 @@ class AdvancedCurves {
   static double heartbeatCurve(double t, double bpm) {
     final period = 60.0 / bpm;
     final phase = (t % period) / period;
-    if (phase < 0.08) return pow(phase / 0.08, 0.5);
+    if (phase < 0.08) return pow(phase / 0.08, 0.5).toDouble();
     if (phase < 0.15) return 1.0 - pow((phase - 0.08) / 0.07, 2);
     if (phase < 0.35) return 0.2 + 0.8 * pow(1 - (phase - 0.15) / 0.2, 3);
     return 0.0;
