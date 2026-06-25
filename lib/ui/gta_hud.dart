@@ -33,7 +33,6 @@ class GTAHud extends StatelessWidget {
                 const SizedBox(width: 8),
                 _hudCard('PLEASURE', '${(bodyManager.pleasure * 100).toInt()}%', Colors.pink),
                 const SizedBox(width: 8),
-                _hudCard('ANIM', bodyManager.bodyAnimation.currentType.name.toUpperCase(), Colors.cyan),
               ],
             ),
           ],

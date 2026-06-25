@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:gta6hub/engine/core/advanced_curves.dart';
+import "package:gta6hub/engine/core/advanced_curves.dart";
 
 class MotionState {
   double breathAmplitude;
