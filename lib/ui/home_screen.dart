@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:gta6hub/core/simulation_provider.dart';
+import 'package:gta6hub/engine/engine_integrator.dart';
 import 'package:gta6hub/engine/fluids/fluid_simulator.dart';
 import 'package:gta6hub/engine/fluids/fluid_emitter.dart';
 import 'package:gta6hub/engine/cinematics/cinematic_impact_system.dart';
@@ -10,7 +11,8 @@ import 'package:gta6hub/ui/gta_hud.dart';
 import 'package:gta6hub/ui/director_sandbox.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  final EngineIntegrator engine;
+  const HomeScreen({Key? key, required this.engine}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -21,7 +23,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final FluidSimulator _fluidSimulator = FluidSimulator();
   final FluidEmitter _fluidEmitter = FluidEmitter();
   final MotionRecorder _motionRecorder = MotionRecorder();
-  SimulationState _lastState = SimulationState.idle;
 
   @override
   void initState() {
@@ -30,44 +31,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final sim = Provider.of<SimulationProvider>(context, listen: false);
       double delta = elapsed.inMilliseconds / 1000.0;
       
-      if (sim.autoMode) {
-        _motionRecorder.updatePlayback(delta);
-        final frame = _motionRecorder.getFrameAtTime(_motionRecorder.playbackTime);
-        if (frame != null) {
-          sim.setSpeedDirect(frame.speed);
-          sim.setDepthDirect(frame.depth);
-          sim.changePosition(frame.position);
-        }
-      }
+      // تحديث المحرك الموحد
+      widget.engine.update(delta, MediaQuery.of(context).size);
       
-      sim.update(delta);
+      // تحديث السوائل والفيزياء
       _fluidSimulator.update(delta);
       
-      if (_motionRecorder.isRecording) {
-        _motionRecorder.recordFrame(sim.thrustSpeed, sim.thrustDepth, sim.currentPosition, delta);
-      }
-      
-      if (sim.currentState == SimulationState.peak && _lastState != SimulationState.peak) {
-        final origin = Offset(MediaQuery.of(context).size.width / 2, MediaQuery.of(context).size.height / 2);
-        final direction = const Offset(0, -1);
-        final newParticles = _fluidEmitter.emitCum(origin, direction, (sim.thrustSpeed / 50.0).clamp(0.5, 2.0));
-        _fluidSimulator.emitParticles(newParticles);
-      }
-      _lastState = sim.currentState;
       if (mounted) setState(() {});
     });
     _ticker.start();
-  }
-
-  void _saveCurrentSequence() async {
-    if (_motionRecorder.frameCount == 0) return;
-    final name = "Sequence_${DateTime.now().millisecondsSinceEpoch}";
-    await _motionRecorder.saveCurrentSequence(name);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('✅ Saved: $name'), backgroundColor: const Color(0xFFFF2A6D)),
-      );
-    }
   }
 
   @override
@@ -86,64 +58,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: Stack(
           children: [
             Container(color: const Color(0xFF0A0A0F)),
-            Positioned.fill(child: CustomPaint(painter: _FluidCanvasPainter(simulator: _fluidSimulator))),
-            Center(
-              child: Opacity(
-                opacity: (sim.arousal / 100.0).clamp(0.3, 1.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.local_fire_department, size: 80 + (sim.arousal * 0.4), color: const Color(0xFFFF2A6D)),
-                    const SizedBox(height: 20),
-                    const Text('gta6hub', style: TextStyle(fontSize: 28, color: Colors.white, letterSpacing: 10, fontWeight: FontWeight.bold)),
-                    if (_motionRecorder.isRecording)
-                      const Text('🔴 REC', style: TextStyle(color: Colors.red, fontSize: 12, letterSpacing: 4)),
-                    if (_motionRecorder.isPlaying)
-                      const Text('▶️ PLAYING', style: TextStyle(color: Colors.green, fontSize: 12, letterSpacing: 4)),
-                  ],
-                ),
+            // طبقة الرسوم (Engine Renderer)
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _EnginePainter(engine: widget.engine, simulator: _fluidSimulator),
               ),
             ),
-            Positioned(
-              bottom: 100, left: 0, right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _recButton(Icons.fiber_manual_record, Colors.red, () {
-                    if (_motionRecorder.isRecording) {
-                      _motionRecorder.stopRecording();
-                    } else {
-                      _motionRecorder.startRecording();
-                    }
-                    setState(() {});
-                  }, _motionRecorder.isRecording),
-                  const SizedBox(width: 10),
-                  // زر حفظ التسلسل الحالي للحفظ الدائم
-                  _recButton(Icons.save, Colors.blue, _saveCurrentSequence, _motionRecorder.frameCount > 0),
-                  const SizedBox(width: 10),
-                  _recButton(Icons.play_arrow, Colors.green, () {
-                    if (_motionRecorder.isPlaying) {
-                      _motionRecorder.stopPlayback();
-                      sim.setAutoMode(false);
-                    } else {
-                      sim.setAutoMode(true);
-                      _motionRecorder.startPlayback();
-                    }
-                    setState(() {});
-                  }, _motionRecorder.isPlaying),
-                ],
-              ),
-            ),
+            // طبقة الواجهة
             const GTAHud(),
             Positioned(
               top: 40, right: 10,
-              child: GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DirectorSandbox())),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFFF2A6D))),
-                  child: const Icon(Icons.dashboard_customize, color: Color(0xFFFF2A6D), size: 20),
-                ),
+              child: IconButton(
+                icon: const Icon(Icons.dashboard_customize, color: Color(0xFFFF2A6D)),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DirectorSandbox())),
               ),
             ),
           ],
@@ -151,28 +78,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     );
   }
-
-  Widget _recButton(IconData icon, Color color, VoidCallback onTap, bool active) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: active ? color.withOpacity(0.3) : Colors.black54,
-          border: Border.all(color: color),
-        ),
-        child: Icon(icon, color: color, size: 24),
-      ),
-    );
-  }
 }
 
-class _FluidCanvasPainter extends CustomPainter {
+class _EnginePainter extends CustomPainter {
+  final EngineIntegrator engine;
   final FluidSimulator simulator;
-  _FluidCanvasPainter({required this.simulator});
+  _EnginePainter({required this.engine, required this.simulator});
+
   @override
-  void paint(Canvas canvas, Size size) => simulator.render(canvas);
+  void paint(Canvas canvas, Size size) {
+    engine.render(canvas, size);
+    simulator.render(canvas);
+  }
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
