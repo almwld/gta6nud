@@ -1,4 +1,4 @@
-name: 🔥 Prometheus CI/CD - Clean Build
+name: 🔥 Prometheus CI/CD
 
 on:
   push:
@@ -8,7 +8,6 @@ jobs:
   build:
     name: 🚀 Build Android APK
     runs-on: ubuntu-latest
-
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -30,21 +29,12 @@ jobs:
           rm -rf android
           flutter create --platforms=android .
 
-      - name: 🧬 Create Placeholder Assets
+      - name: 🧬 Create Assets
         run: |
-          echo "🔄 Creating placeholder assets..."
-          mkdir -p assets/body/skins
-          mkdir -p assets/body/models
-          mkdir -p assets/body/animations
-          mkdir -p assets/audio
-          mkdir -p assets/icons
-          mkdir -p assets/images
-          mkdir -p assets/fonts
-          
+          mkdir -p assets/body/skins assets/body/models assets/body/animations assets/audio assets/icons assets/images assets/fonts
           touch assets/body/skins/default_skin.png
           touch assets/body/models/default_body.obj
           touch assets/body/animations/default_sprite.png
-          
           touch assets/audio/heartbeat.mp3
           touch assets/audio/breathing.mp3
           touch assets/audio/ambient.mp3
@@ -52,10 +42,7 @@ jobs:
           touch assets/audio/moan_high.mp3
           touch assets/audio/scream.mp3
           touch assets/audio/wet.mp3
-          
           touch assets/icon-gta6hub.png
-          
-          echo "✅ Placeholder assets created"
 
       - name: 📦 Install Dependencies
         run: flutter pub get
@@ -63,7 +50,7 @@ jobs:
       - name: 🛠️ Build Release APK
         run: flutter build apk --release
 
-      - name: 📤 Upload APK Artifact
+      - name: 📤 Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: gta6hub-release-apk

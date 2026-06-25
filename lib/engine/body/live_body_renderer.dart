@@ -44,12 +44,6 @@ class LiveBodyRenderer {
   double _globalArousal = 0.0;
   double _time = 0.0;
 
-  final Color skinBase = const Color(0xFFE8C0A0);
-  final Color skinShadow = const Color(0xFFD4A878);
-  final Color skinHighlight = const Color(0xFFF0D8C0);
-  final Color nippleColor = const Color(0xFFC08870);
-  final Color lipsColor = const Color(0xFFD08880);
-
   LiveBodyRenderer() {
     _initZones();
   }
@@ -72,7 +66,6 @@ class LiveBodyRenderer {
     _time += deltaTime;
     _globalArousal = arousal.clamp(0.0, 1.0);
     _motion.update(deltaTime, arousal);
-
     for (final zone in _zones) {
       if (!zone.isBeingTouched) {
         zone.arousal *= 0.92;
@@ -103,65 +96,62 @@ class LiveBodyRenderer {
     final w = screenSize.width;
     final h = screenSize.height;
     
-    // الحركات البيولوجية
     final breathY = _motion.breathOffset * h;
     final tremorX = _motion.tremorOffset * w * 0.02;
     final tremorY = _motion.tremorOffset * h * 0.02;
     final hipSway = _motion.hipSway * w;
-    final spineCurve = _motion.spineCurve * h;
     
     final cx = w / 2 + tremorX + hipSway;
     final baseY = h * 0.05 + breathY + tremorY;
 
-    // === الرأس ===
+    // === تأثير Subsurface Scattering (توهج تحت الجلد) ===
+    _drawSSSGlow(canvas, screenSize);
+
     _drawHead(canvas, Offset(cx, baseY), w * 0.13);
-
-    // === الرقبة ===
     _drawNeck(canvas, Offset(cx, baseY + h * 0.12), w * 0.07, h * 0.06);
-
-    // === الكتفين ===
     final shoulderY = baseY + h * 0.18 + _motion.shoulderShrug * h;
     _drawShoulders(canvas, Offset(cx, shoulderY), w * 0.38);
-
-    // === الصدر (يتوسع مع التنفس) ===
     final chestBreathExpand = 1.0 + _motion.breathOffset * 0.5;
     final chestTop = shoulderY + h * 0.02;
     final chestBottom = shoulderY + h * 0.18;
     _drawChest(canvas, Offset(cx, chestTop), Offset(cx, chestBottom), w * 0.22 * chestBreathExpand, w * 0.32 * chestBreathExpand);
-
-    // === البطن ===
     final bellyBottom = chestBottom + h * 0.16;
     _drawBelly(canvas, Offset(cx, chestBottom), Offset(cx + hipSway * 0.5, bellyBottom), w * 0.3);
-
-    // === منطقة العانة ===
     _drawGroin(canvas, Offset(cx + hipSway * 0.5, bellyBottom + h * 0.02), w * 0.14, h * 0.1);
-
-    // === القضيب (يتحرك مع الانتصاب والنبض) ===
     if (_globalArousal > 0.2) {
-      _drawPenis(
-        canvas,
-        Offset(cx + hipSway * 0.5, bellyBottom + h * 0.06),
-        w * 0.04 * _motion.erectionPulse,
-        h * 0.15 * _motion.erectionPulse,
-        _motion.erectionAngle,
-      );
+      _drawPenis(canvas, Offset(cx + hipSway * 0.5, bellyBottom + h * 0.06), w * 0.04 * _motion.erectionPulse, h * 0.15 * _motion.erectionPulse, _motion.erectionAngle);
     }
-
-    // === الفخذين ===
     _drawThighs(canvas, Offset(cx + hipSway * 0.5, bellyBottom + h * 0.08), w * 0.12, h * 0.32);
-
-    // === الذراعين ===
     _drawArms(canvas, Offset(cx, shoulderY), w * 0.38, h * 0.32);
-
-    // === مناطق التفاعل ===
     _drawZones(canvas, screenSize);
   }
 
+  /// تأثير توهج تحت الجلد (Subsurface Scattering)
+  void _drawSSSGlow(Canvas canvas, Size screenSize) {
+    if (_globalArousal < 0.2) return;
+    final glowOpacity = (_globalArousal - 0.2) * 0.3;
+    final center = Offset(screenSize.width / 2, screenSize.height * 0.35);
+    final glowRadius = screenSize.width * 0.5 * (1.0 + _globalArousal * 0.3);
+    
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        center: Alignment.center,
+        radius: 0.6,
+        colors: [
+          const Color(0xFFFF6B6B).withOpacity(glowOpacity * 0.6),
+          const Color(0xFFFF4444).withOpacity(glowOpacity * 0.3),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: glowRadius));
+    
+    canvas.drawCircle(center, glowRadius, glowPaint);
+  }
+
   void _drawHead(Canvas canvas, Offset center, double radius) {
-    canvas.drawCircle(center + Offset(2, 2), radius, Paint()..color = skinShadow);
-    canvas.drawCircle(center, radius, Paint()..color = skinBase);
+    canvas.drawCircle(center + Offset(2, 2), radius, Paint()..color = const Color(0xFFD4A878));
+    canvas.drawCircle(center, radius, Paint()..color = const Color(0xFFE8C0A0));
     final hlPaint = Paint()
-      ..shader = RadialGradient(colors: [skinHighlight.withOpacity(0.6), Colors.transparent])
+      ..shader = RadialGradient(colors: [const Color(0xFFF0D8C0).withOpacity(0.6), Colors.transparent])
           .createShader(Rect.fromCircle(center: center - Offset(radius * 0.3, radius * 0.3), radius: radius));
     canvas.drawCircle(center, radius, hlPaint);
 
@@ -180,7 +170,7 @@ class LiveBodyRenderer {
     final mouthPath = Path()
       ..moveTo(center.dx - radius * 0.3, mouthY)
       ..quadraticBezierTo(center.dx, mouthY + radius * 0.2 + mouthOpen, center.dx + radius * 0.3, mouthY);
-    canvas.drawPath(mouthPath, Paint()..color = lipsColor..style = PaintingStyle.stroke..strokeWidth = 2.5);
+    canvas.drawPath(mouthPath, Paint()..color = const Color(0xFFD08880)..style = PaintingStyle.stroke..strokeWidth = 2.5);
   }
 
   void _drawNeck(Canvas canvas, Offset top, double width, double height) {
@@ -190,8 +180,8 @@ class LiveBodyRenderer {
       ..lineTo(top.dx + width * 0.7, top.dy + height)
       ..quadraticBezierTo(top.dx + width * 0.8, top.dy + height * 0.5, top.dx + width, top.dy)
       ..close();
-    canvas.drawPath(path, Paint()..color = skinBase);
-    canvas.drawCircle(top + Offset(0, height * 0.4), width * 0.3, Paint()..color = skinShadow.withOpacity(0.4));
+    canvas.drawPath(path, Paint()..color = const Color(0xFFE8C0A0));
+    canvas.drawCircle(top + Offset(0, height * 0.4), width * 0.3, Paint()..color = const Color(0xFFD4A878).withOpacity(0.4));
   }
 
   void _drawShoulders(Canvas canvas, Offset center, double width) {
@@ -201,7 +191,7 @@ class LiveBodyRenderer {
       ..lineTo(center.dx + width * 0.5, center.dy + width * 0.15)
       ..quadraticBezierTo(center.dx + width * 0.7, center.dy - width * 0.12, center.dx + width, center.dy)
       ..close();
-    canvas.drawPath(path, Paint()..color = skinBase);
+    canvas.drawPath(path, Paint()..color = const Color(0xFFE8C0A0));
   }
 
   void _drawChest(Canvas canvas, Offset top, Offset bottom, double topWidth, double bottomWidth) {
@@ -215,15 +205,14 @@ class LiveBodyRenderer {
     final gradient = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [skinHighlight, skinBase, skinShadow],
+      colors: [const Color(0xFFF0D8C0), const Color(0xFFE8C0A0), const Color(0xFFD4A878)],
     ).createShader(Rect.fromLTRB(top.dx - topWidth, top.dy, top.dx + topWidth, bottom.dy));
-    
     canvas.drawPath(path, Paint()..shader = gradient);
 
     final musclePath = Path()
       ..moveTo(top.dx - topWidth * 0.7, top.dy + (bottom.dy - top.dy) * 0.2)
       ..quadraticBezierTo(top.dx, top.dy + (bottom.dy - top.dy) * 0.1, top.dx + topWidth * 0.7, top.dy + (bottom.dy - top.dy) * 0.2);
-    canvas.drawPath(musclePath, Paint()..color = skinShadow.withOpacity(0.2)..style = PaintingStyle.stroke..strokeWidth = 2);
+    canvas.drawPath(musclePath, Paint()..color = const Color(0xFFD4A878).withOpacity(0.2)..style = PaintingStyle.stroke..strokeWidth = 2);
 
     final nippleY = top.dy + (bottom.dy - top.dy) * 0.35;
     _drawNipple(canvas, Offset(top.dx - topWidth * 0.38, nippleY));
@@ -231,9 +220,9 @@ class LiveBodyRenderer {
   }
 
   void _drawNipple(Canvas canvas, Offset center) {
-    canvas.drawCircle(center, 6, Paint()..color = nippleColor);
-    canvas.drawCircle(center, 3, Paint()..color = nippleColor.withOpacity(0.7));
-    canvas.drawCircle(center, 12, Paint()..color = nippleColor.withOpacity(0.2));
+    canvas.drawCircle(center, 6, Paint()..color = const Color(0xFFC08870));
+    canvas.drawCircle(center, 3, Paint()..color = const Color(0xFFC08870).withOpacity(0.7));
+    canvas.drawCircle(center, 12, Paint()..color = const Color(0xFFC08870).withOpacity(0.2));
   }
 
   void _drawBelly(Canvas canvas, Offset top, Offset bottom, double width) {
@@ -243,8 +232,8 @@ class LiveBodyRenderer {
       ..lineTo(bottom.dx + width * 0.75, bottom.dy)
       ..quadraticBezierTo(top.dx + width * 0.9, top.dy + (bottom.dy - top.dy) * 0.5, top.dx + width, top.dy)
       ..close();
-    canvas.drawPath(path, Paint()..color = skinBase);
-    canvas.drawCircle(Offset(bottom.dx, top.dy + (bottom.dy - top.dy) * 0.3), width * 0.1, Paint()..color = skinShadow.withOpacity(0.5));
+    canvas.drawPath(path, Paint()..color = const Color(0xFFE8C0A0));
+    canvas.drawCircle(Offset(bottom.dx, top.dy + (bottom.dy - top.dy) * 0.3), width * 0.1, Paint()..color = const Color(0xFFD4A878).withOpacity(0.5));
   }
 
   void _drawGroin(Canvas canvas, Offset center, double width, double height) {
@@ -253,7 +242,7 @@ class LiveBodyRenderer {
       ..quadraticBezierTo(center.dx - width * 0.6, center.dy + height * 0.6, center.dx, center.dy + height)
       ..quadraticBezierTo(center.dx + width * 0.6, center.dy + height * 0.6, center.dx + width, center.dy)
       ..close();
-    canvas.drawPath(path, Paint()..color = skinShadow);
+    canvas.drawPath(path, Paint()..color = const Color(0xFFD4A878));
   }
 
   void _drawPenis(Canvas canvas, Offset base, double width, double height, double angle) {
@@ -270,7 +259,6 @@ class LiveBodyRenderer {
       end: Alignment.bottomCenter,
       colors: [const Color(0xFFD4A090), const Color(0xFFC08080).withOpacity(0.8 + _globalArousal * 0.2)],
     ).createShader(Rect.fromLTRB(base.dx - width, base.dy, base.dx + width, tip.dy));
-    
     canvas.drawPath(path, Paint()..shader = shaftGradient);
     canvas.drawCircle(tip, width * 1.5, Paint()..color = const Color(0xFFC06070));
   }
@@ -284,7 +272,7 @@ class LiveBodyRenderer {
         ..lineTo(top.dx + dx + width * 0.6, top.dy + height)
         ..quadraticBezierTo(top.dx + dx + width * 0.9, top.dy + height * 0.5, top.dx + dx + width * 0.8, top.dy)
         ..close();
-      canvas.drawPath(path, Paint()..color = skinBase);
+      canvas.drawPath(path, Paint()..color = const Color(0xFFE8C0A0));
     }
   }
 
@@ -297,8 +285,8 @@ class LiveBodyRenderer {
         ..lineTo(shoulderCenter.dx + dx + shoulderWidth * 0.06, shoulderCenter.dy + length)
         ..quadraticBezierTo(shoulderCenter.dx + dx + shoulderWidth * 0.12, shoulderCenter.dy + length * 0.4, shoulderCenter.dx + dx + shoulderWidth * 0.08, shoulderCenter.dy)
         ..close();
-      canvas.drawPath(path, Paint()..color = skinBase);
-      canvas.drawCircle(Offset(shoulderCenter.dx + dx, shoulderCenter.dy + length), shoulderWidth * 0.08, Paint()..color = skinBase);
+      canvas.drawPath(path, Paint()..color = const Color(0xFFE8C0A0));
+      canvas.drawCircle(Offset(shoulderCenter.dx + dx, shoulderCenter.dy + length), shoulderWidth * 0.08, Paint()..color = const Color(0xFFE8C0A0));
     }
   }
 
@@ -311,7 +299,6 @@ class LiveBodyRenderer {
           path.lineTo(absPolygon[i].dx, absPolygon[i].dy);
         }
         path.close();
-        
         final opacity = zone.isBeingTouched ? 0.3 + zone.arousal * 0.4 : zone.arousal * 0.2;
         canvas.drawPath(path, Paint()..color = const Color(0xFFFF2A6D).withOpacity(opacity)..style = PaintingStyle.fill);
         canvas.drawPath(path, Paint()..color = const Color(0xFFFF2A6D).withOpacity(opacity + 0.1)..style = PaintingStyle.stroke..strokeWidth = 2);
