@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:gta6hub/core/simulation_provider.dart';
-import 'package:gta6hub/engine/fluids/fluid_simulator.dart';
-import 'package:gta6hub/engine/fluids/fluid_emitter.dart';
+import 'package:gta6hub/engine/body/body_manager.dart';
+import 'package:gta6hub/engine/fluids/fluid_output_system.dart';
+import 'package:gta6hub/engine/cinematics/cinematic_show_system.dart';
 import 'package:gta6hub/engine/cinematics/motion_recorder.dart';
 import 'package:gta6hub/ui/gta_hud.dart';
 import 'package:gta6hub/ui/director_sandbox.dart';
+import 'dart:math';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -16,29 +18,48 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late final Ticker _ticker;
-  final FluidSimulator _fluidSimulator = FluidSimulator();
-  final FluidEmitter _fluidEmitter = FluidEmitter();
+  final FluidOutputSystem _fluidOutput = FluidOutputSystem();
+  final CinematicShowSystem _cinematicShow = CinematicShowSystem();
   final MotionRecorder _motionRecorder = MotionRecorder();
   SimulationState _lastState = SimulationState.idle;
-  double _time = 0;
-  final Size _screenSize = const Size(400, 800); // حجم افتراضي
+  final Random _random = Random();
 
   @override
   void initState() {
     super.initState();
     _ticker = createTicker((elapsed) {
       final sim = Provider.of<SimulationProvider>(context, listen: false);
+      final bodyManager = Provider.of<BodyManager>(context, listen: false);
       double delta = elapsed.inMilliseconds / 1000.0;
-      _time += delta;
+
       sim.update(delta);
+      bodyManager.setArousal(sim.arousal / 100.0);
+      bodyManager.setPleasure(sim.thrustSpeed / 100.0);
+      bodyManager.update(delta);
       
-      // تحديث السوائل مع حجم الشاشة الفعلي
-      _fluidSimulator.update(delta, screenSize: MediaQuery.of(context).size);
-      
+      final screenSize = MediaQuery.of(context).size;
+      _fluidOutput.update(delta, screenSize);
+      _cinematicShow.update(delta);
+
+      // الذروة: إطلاق السوائل من منتصف الشاشة السفلي
       if (sim.currentState == SimulationState.peak && _lastState != SimulationState.peak) {
-        final origin = Offset(MediaQuery.of(context).size.width / 2, MediaQuery.of(context).size.height / 2);
-        _fluidSimulator.emitParticles(_fluidEmitter.emitCum(origin, const Offset(0, -1), (sim.thrustSpeed / 50).clamp(0.5, 2.0)));
+        final origin = Offset(screenSize.width / 2, screenSize.height * 0.65);
+        _fluidOutput.emitOrgasmWaves(
+          origin: origin,
+          direction: const Offset(0, -1),
+          waves: 5,
+          force: (sim.thrustSpeed / 50).clamp(0.5, 2.0),
+        );
+        _cinematicShow.play('climax');
+        bodyManager.triggerClimax();
       }
+
+      // استعادة
+      if (_lastState == SimulationState.peak && sim.currentState != SimulationState.peak) {
+        bodyManager.recover();
+        _cinematicShow.play('calm');
+      }
+
       _lastState = sim.currentState;
       if (mounted) setState(() {});
     });
@@ -54,86 +75,123 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final sim = Provider.of<SimulationProvider>(context);
+    final bodyManager = Provider.of<BodyManager>(context);
+
     return Scaffold(
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: RadialGradient(center: Alignment.center, colors: [Color(0xFF1A0A2E), Color(0xFF050508)], radius: 1.5),
-            ),
-          ),
-          Positioned.fill(
-            child: CustomPaint(painter: _FluidCanvasPainter(simulator: _fluidSimulator)),
-          ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedScale(
-                  scale: 1.0 + (sim.arousal / 100) * 0.3,
-                  duration: const Duration(milliseconds: 100),
-                  child: Icon(Icons.local_fire_department, size: 80 + sim.arousal * 0.4, color: const Color(0xFFFF2A6D)),
-                ),
-                const SizedBox(height: 30),
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(colors: [Color(0xFFFF2A6D), Color(0xFF00D4FF)]).createShader(bounds),
-                  child: const Text('GTA6HUB', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 12, color: Colors.white)),
-                ),
-                const SizedBox(height: 40),
-                // أزرار تحكم سريعة
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _controlButton('Speed +', () => sim.setSpeedDirect((sim.thrustSpeed + 10).clamp(0, 100))),
-                    const SizedBox(width: 10),
-                    _controlButton('Speed -', () => sim.setSpeedDirect((sim.thrustSpeed - 10).clamp(0, 100))),
-                    const SizedBox(width: 20),
-                    _controlButton('Depth +', () => sim.setDepthDirect((sim.thrustDepth + 10).clamp(0, 100))),
-                    const SizedBox(width: 10),
-                    _controlButton('Depth -', () => sim.setDepthDirect((sim.thrustDepth - 10).clamp(0, 100))),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const GTAHud(),
-          Positioned(
-            top: 50, right: 15,
-            child: GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DirectorSandbox())),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFF2A6D).withOpacity(0.5))),
-                child: const Icon(Icons.dashboard_customize, color: Color(0xFFFF2A6D), size: 22),
+      body: GestureDetector(
+        onPanUpdate: (details) {
+          bodyManager.touchAt(details.globalPosition, MediaQuery.of(context).size);
+          // رش خفيف عند اللمس
+          if (sim.arousal > 30 && _random.nextDouble() < 0.1) {
+            _fluidOutput.emitSpray(
+              origin: details.globalPosition,
+              direction: Offset((_random.nextDouble() - 0.5) * 0.5, -1),
+              force: 0.3,
+              count: 5,
+              spreadAngle: 0.8,
+              color: Colors.white.withOpacity(0.5),
+            );
+          }
+        },
+        child: Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                gradient: RadialGradient(center: Alignment.center, colors: [Color(0xFF1A0A2E), Color(0xFF050508)], radius: 1.5),
               ),
             ),
-          ),
-        ],
+            Positioned.fill(child: CustomPaint(painter: _CinematicPainter(showSystem: _cinematicShow))),
+            Positioned.fill(child: CustomPaint(painter: _BodyPainter(bodyManager: bodyManager))),
+            Positioned.fill(child: CustomPaint(painter: _FluidPainter(system: _fluidOutput))),
+            Center(
+              child: Transform.scale(
+                scale: _cinematicShow.zoomLevel,
+                child: Transform.translate(
+                  offset: _cinematicShow.applyShake(Offset.zero),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 220),
+                      ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(colors: [Color(0xFFFF2A6D), Color(0xFF00D4FF)]).createShader(bounds),
+                        child: const Text('GTA6HUB', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 12, color: Colors.white)),
+                      ),
+                      const SizedBox(height: 20),
+                      Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
+                        _btn('SPEED +', () => sim.setSpeedDirect((sim.thrustSpeed + 10).clamp(0, 100))),
+                        _btn('SPEED -', () => sim.setSpeedDirect((sim.thrustSpeed - 10).clamp(0, 100))),
+                        _btn('DEPTH +', () => sim.setDepthDirect((sim.thrustDepth + 10).clamp(0, 100))),
+                        _btn('DEPTH -', () => sim.setDepthDirect((sim.thrustDepth - 10).clamp(0, 100))),
+                        _btn('💦 CLIMAX', () { sim.setSpeedDirect(100); sim.setDepthDirect(100); }, special: true),
+                        _btn('🧹 CLEAR', () => _fluidOutput.clear()),
+                      ]),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const GTAHud(),
+            Positioned(
+              top: 50, right: 15,
+              child: GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DirectorSandbox())),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFF2A6D).withOpacity(0.5))),
+                  child: const Icon(Icons.dashboard_customize, color: Color(0xFFFF2A6D), size: 22),
+                ),
+              ),
+            ),
+            // عداد القطرات
+            Positioned(
+              bottom: 10, left: 10,
+              child: Text('💧 ${_fluidOutput.activeDroplets}', style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11)),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _controlButton(String label, VoidCallback onTap) {
+  Widget _btn(String label, VoidCallback onTap, {bool special = false}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFFFF2A6D).withOpacity(0.2),
+          color: special ? const Color(0xFFFF2A6D).withOpacity(0.4) : const Color(0xFFFF2A6D).withOpacity(0.15),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFFF2A6D).withOpacity(0.5)),
+          border: Border.all(color: special ? const Color(0xFFFF2A6D) : const Color(0xFFFF2A6D).withOpacity(0.5), width: special ? 2 : 1),
         ),
-        child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+        child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
       ),
     );
   }
 }
 
-class _FluidCanvasPainter extends CustomPainter {
-  final FluidSimulator simulator;
-  _FluidCanvasPainter({required this.simulator});
+class _BodyPainter extends CustomPainter {
+  final BodyManager bodyManager;
+  _BodyPainter({required this.bodyManager});
   @override
-  void paint(Canvas canvas, Size size) => simulator.render(canvas);
+  void paint(Canvas canvas, Size size) => bodyManager.render(canvas, size);
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class _CinematicPainter extends CustomPainter {
+  final CinematicShowSystem showSystem;
+  _CinematicPainter({required this.showSystem});
+  @override
+  void paint(Canvas canvas, Size size) => showSystem.applyEffects(canvas, size);
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class _FluidPainter extends CustomPainter {
+  final FluidOutputSystem system;
+  _FluidPainter({required this.system});
+  @override
+  void paint(Canvas canvas, Size size) => system.render(canvas);
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
