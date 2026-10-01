@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../rendering/material_pipeline.dart';
+
 class SkinState {
   double redness;
   double sweat;
@@ -16,12 +18,11 @@ class SkinState {
     this.warmth = 0.0,
   });
 
-  void updateFromActivity(double activityLevel) {
-    final activity = activityLevel.clamp(0.0, 1.0).toDouble();
-    redness = (activity * 0.7).clamp(0.0, 1.0).toDouble();
-    sweat = (activity * 1.2).clamp(0.0, 1.0).toDouble();
-    goosebumps = (activity * 0.5).clamp(0.0, 1.0).toDouble();
-    warmth = (activity * 0.8).clamp(0.0, 1.0).toDouble();
+  void applyMaterialState(CharacterMaterialState state) {
+    redness = (state.warmth * 0.8).clamp(0.0, 1.0).toDouble();
+    sweat = state.sweat;
+    goosebumps = (state.activity * 0.5).clamp(0.0, 1.0).toDouble();
+    warmth = state.warmth;
   }
 }
 
@@ -41,6 +42,7 @@ class BodyRenderer {
   ui.Image? _skinTexture;
   ui.Image? _spriteSheet;
   final List<BodyFrame> _frames = [];
+  final MaterialPipeline materialPipeline = const MaterialPipeline();
   int _currentFrame = 0;
   double _frameTimer = 0;
   double _bodyRotation = 0;
@@ -93,7 +95,10 @@ class BodyRenderer {
   }
 
   void render(Canvas canvas, Size screenSize, double activityLevel) {
-    skinState.updateFromActivity(activityLevel);
+    final materialState = materialPipeline.updateCharacterMaterial(
+      activityLevel: activityLevel,
+    );
+    skinState.applyMaterialState(materialState);
     final center = Offset(screenSize.width / 2, screenSize.height / 2);
     final bodyWidth = screenSize.width * 0.6;
     final bodyHeight = screenSize.height * 0.7;
