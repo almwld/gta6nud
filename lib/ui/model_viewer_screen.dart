@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_3d_controller/flutter_3d_controller.dart';
 
+import '../controllers/unified_animation_controller.dart';
 import '../engine/models/model_catalog.dart';
+import '../services/character_asset_service.dart';
 
 class ModelViewerScreen extends StatefulWidget {
   const ModelViewerScreen({
@@ -19,20 +21,68 @@ class ModelViewerScreen extends StatefulWidget {
 
 class _ModelViewerScreenState extends State<ModelViewerScreen> {
   late final Flutter3DController _controller;
+  late final UnifiedAnimationController _animation;
+  final CharacterAssetService _assetService = const CharacterAssetService();
+
   double _progress = 0;
   late String _selectedUrl;
+  List<String> _availableAnimations = const [];
+  bool _loadingAnimations = false;
 
   @override
   void initState() {
     super.initState();
     _controller = Flutter3DController();
+    _animation = UnifiedAnimationController()..addListener(_syncAnimation);
     _selectedUrl = widget.modelUrl ?? ModelCatalog.adultFemaleRigged.url;
   }
 
   @override
   void dispose() {
+    _animation
+      ..removeListener(_syncAnimation)
+      ..dispose();
+    _controller.stopAnimation();
     _controller.stopRotation();
     super.dispose();
+  }
+
+  Future<void> _loadAnimations() async {
+    if (_loadingAnimations) return;
+    setState(() => _loadingAnimations = true);
+    try {
+      final animations = await _controller.getAvailableAnimations();
+      if (!mounted) return;
+      setState(() => _availableAnimations = animations);
+      _syncAnimation();
+    } finally {
+      if (mounted) setState(() => _loadingAnimations = false);
+    }
+  }
+
+  void _syncAnimation() {
+    if (_availableAnimations.isEmpty) return;
+    final preferred = switch (_animation.currentState) {
+      CharacterAnimationState.idle => const ['Idle', 'idle', 'Standing'],
+      CharacterAnimationState.walk => const ['Walk', 'walk'],
+      CharacterAnimationState.run => const ['Run', 'run'],
+      CharacterAnimationState.fall => const ['Fall', 'fall', 'Jump'],
+    };
+
+    String? selected;
+    for (final name in preferred) {
+      selected = _availableAnimations.cast<String?>().firstWhere(
+            (candidate) => candidate?.toLowerCase() == name.toLowerCase(),
+            orElse: () => null,
+          );
+      if (selected != null) break;
+    }
+    selected ??= _availableAnimations.first;
+    _controller.playAnimation(animationName: selected);
+  }
+
+  void _transition(CharacterAnimationState state) {
+    _animation.transitionTo(state);
   }
 
   @override
@@ -57,7 +107,9 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
                 if (mounted) setState(() => _progress = value);
               },
               onLoad: (_) {
-                if (mounted) setState(() => _progress = 1);
+                if (!mounted) return;
+                setState(() => _progress = 1);
+                _loadAnimations();
               },
               onError: (error) {
                 if (!mounted) return;
@@ -90,6 +142,7 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
                     setState(() {
                       _selectedUrl = value;
                       _progress = 0;
+                      _availableAnimations = const [];
                     });
                   },
                 ),
@@ -97,27 +150,63 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
             ),
           ),
           Positioned(
-            left: 16,
-            right: 16,
-            bottom: 18,
+            left: 12,
+            right: 12,
+            bottom: 70,
             child: SafeArea(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _ControlButton(
-                    icon: Icons.threed_rotation,
-                    onPressed: () =>
-                        _controller.startRotation(rotationSpeed: 18),
+                  if (_loadingAnimations)
+                    const LinearProgressIndicator(minHeight: 2),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _StateButton(
+                          label: 'Idle',
+                          onPressed: () =>
+                              _transition(CharacterAnimationState.idle),
+                        ),
+                        _StateButton(
+                          label: 'Walk',
+                          onPressed: () =>
+                              _transition(CharacterAnimationState.walk),
+                        ),
+                        _StateButton(
+                          label: 'Run',
+                          onPressed: () =>
+                              _transition(CharacterAnimationState.run),
+                        ),
+                        _StateButton(
+                          label: 'Fall',
+                          onPressed: () =>
+                              _transition(CharacterAnimationState.fall),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  _ControlButton(
-                    icon: Icons.pause,
-                    onPressed: _controller.pauseRotation,
-                  ),
-                  const SizedBox(width: 8),
-                  _ControlButton(
-                    icon: Icons.restart_alt,
-                    onPressed: _controller.stopRotation,
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _ControlButton(
+                        icon: Icons.threed_rotation,
+                        onPressed: () =>
+                            _controller.startRotation(rotationSpeed: 18),
+                      ),
+                      const SizedBox(width: 8),
+                      _ControlButton(
+                        icon: Icons.pause,
+                        onPressed: _controller.pauseRotation,
+                      ),
+                      const SizedBox(width: 8),
+                      _ControlButton(
+                        icon: Icons.restart_alt,
+                        onPressed: _controller.stopRotation,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -127,10 +216,28 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
             Positioned(
               left: 24,
               right: 24,
-              bottom: 78,
+              bottom: 58,
               child: LinearProgressIndicator(value: _progress),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _StateButton extends StatelessWidget {
+  const _StateButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: FilledButton.tonal(
+        onPressed: onPressed,
+        child: Text(label),
       ),
     );
   }
