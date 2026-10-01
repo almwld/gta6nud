@@ -25,31 +25,26 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: 🛠️ Regenerate Android Shell
+      - name: 🛠️ Prepare Android Shell
         run: |
-          rm -rf android
-          flutter create --platforms=android .
+          if [ ! -d android ]; then
+            flutter create --platforms=android .
+          fi
 
       - name: 🖼️ Generate Launcher Icons
         run: flutter pub run flutter_launcher_icons:main
 
-      - name: 🧬 Create Placeholder Assets
+      - name: 🧰 Prepare Asset Directories
         run: |
-          mkdir -p assets/body/skins assets/body/models assets/body/animations assets/audio assets/icons assets/images assets/fonts
-          touch assets/body/skins/default_skin.png
-          touch assets/body/models/default_body.obj
-          touch assets/body/animations/default_sprite.png
-          touch assets/audio/heartbeat.mp3
-          touch assets/audio/breathing.mp3
-          touch assets/audio/ambient.mp3
-          touch assets/audio/moan_low.mp3
-          touch assets/audio/moan_high.mp3
-          touch assets/audio/scream.mp3
-          touch assets/audio/wet.mp3
-          touch assets/icon-gta6hub.png
-
+          mkdir -p assets/icons assets/icons/svg assets/images assets/fonts assets/audio
       - name: 📦 Install Dependencies
         run: flutter pub get
+
+      - name: 🔎 Analyze
+        run: flutter analyze
+
+      - name: 🧪 Test
+        run: flutter test
 
       - name: 🛠️ Build Release APK
         run: flutter build apk --release
