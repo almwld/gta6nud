@@ -19,6 +19,17 @@ void main() {
     expect(controller.previousState, isNull);
   });
 
+  test('resource manager reuses live resources by key', () {
+    final manager = ResourceManager();
+    final first = manager.getOrCreate('character', () => Object());
+    final second = manager.getOrCreate('character', () => Object());
+
+    expect(identical(first, second), isTrue);
+    expect(manager.size, 1);
+    manager.remove('character');
+    expect(manager.size, 0);
+  });
+
   test('character asset service returns one rigged character source', () async {
     const service = CharacterAssetService();
 
