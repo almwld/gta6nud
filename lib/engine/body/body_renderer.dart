@@ -16,11 +16,12 @@ class SkinState {
     this.warmth = 0.0,
   });
 
-  void updateFromArousal(double arousal) {
-    redness = (arousal * 0.7).clamp(0.0, 1.0);
-    sweat = (arousal * 1.2).clamp(0.0, 1.0);
-    goosebumps = (arousal * 0.5).clamp(0.0, 1.0);
-    warmth = (arousal * 0.8).clamp(0.0, 1.0);
+  void updateFromActivity(double activityLevel) {
+    final activity = activityLevel.clamp(0.0, 1.0).toDouble();
+    redness = (activity * 0.7).clamp(0.0, 1.0).toDouble();
+    sweat = (activity * 1.2).clamp(0.0, 1.0).toDouble();
+    goosebumps = (activity * 0.5).clamp(0.0, 1.0).toDouble();
+    warmth = (activity * 0.8).clamp(0.0, 1.0).toDouble();
   }
 }
 
@@ -91,8 +92,8 @@ class BodyRenderer {
     }
   }
 
-  void render(Canvas canvas, Size screenSize, double arousal) {
-    skinState.updateFromArousal(arousal);
+  void render(Canvas canvas, Size screenSize, double activityLevel) {
+    skinState.updateFromActivity(activityLevel);
     final center = Offset(screenSize.width / 2, screenSize.height / 2);
     final bodyWidth = screenSize.width * 0.6;
     final bodyHeight = screenSize.height * 0.7;
