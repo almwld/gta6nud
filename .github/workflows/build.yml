@@ -31,14 +31,15 @@ jobs:
             flutter create --platforms=android .
           fi
 
-      - name: 🖼️ Generate Launcher Icons
-        run: flutter pub run flutter_launcher_icons:main
-
       - name: 🧰 Prepare Asset Directories
         run: |
           mkdir -p assets/icons assets/icons/svg assets/images assets/fonts assets/audio
+
       - name: 📦 Install Dependencies
         run: flutter pub get
+
+      - name: 🖼️ Generate Launcher Icons
+        run: dart run flutter_launcher_icons
 
       - name: 🔎 Analyze
         run: flutter analyze
