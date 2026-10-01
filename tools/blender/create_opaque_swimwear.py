@@ -12,9 +12,9 @@ It does not replace or alter the source skeleton.
 
 import argparse
 import os
-import bpy
+
 import bmesh
-from mathutils import Vector
+import bpy
 
 
 def parse_args():
@@ -52,34 +52,25 @@ def normalized_vertical(value, minimum, maximum):
     return (value - minimum) / span
 
 
-def world_bounds(obj):
-    coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
-    minimum = Vector((
-        min(v.x for v in coords),
-        min(v.y for v in coords),
-        min(v.z for v in coords),
-    ))
-    maximum = Vector((
-        max(v.x for v in coords),
-        max(v.y for v in coords),
-        max(v.z for v in coords),
-    ))
-    return minimum, maximum
-
-
 def make_material(name, base_color):
     material = bpy.data.materials.new(name)
     material.use_nodes = True
     bsdf = material.node_tree.nodes.get("Principled BSDF")
+    if bsdf is None:
+        raise RuntimeError("Principled BSDF node was not created.")
+
     bsdf.inputs["Base Color"].default_value = (*base_color, 1.0)
     bsdf.inputs["Roughness"].default_value = 0.72
     bsdf.inputs["Metallic"].default_value = 0.0
-    # Explicitly opaque: no alpha blending or transmission.
+
+    # Explicitly opaque: alpha is 1 and transmission is disabled.
     if "Alpha" in bsdf.inputs:
         bsdf.inputs["Alpha"].default_value = 1.0
     if "Transmission Weight" in bsdf.inputs:
         bsdf.inputs["Transmission Weight"].default_value = 0.0
-    material.surface_render_method = "DITHERED" if hasattr(material, "surface_render_method") else material.surface_render_method
+    elif "Transmission" in bsdf.inputs:
+        bsdf.inputs["Transmission"].default_value = 0.0
+
     return material
 
 
@@ -90,11 +81,16 @@ def duplicate_region(body, name, low, high, material, offset):
     garment.data.name = name + "_Mesh"
     bpy.context.collection.objects.link(garment)
 
-    # Keep the exact vertex groups and Armature modifier from the body.
-    for mod in garment.modifiers:
-        if mod.type == "ARMATURE":
-            mod.show_viewport = True
-            mod.show_render = True
+    # The object copy preserves vertex groups and the Armature modifier.
+    armature_modifiers = [
+        mod for mod in garment.modifiers if mod.type == "ARMATURE" and mod.object
+    ]
+    if not armature_modifiers:
+        raise RuntimeError(f"{name}: duplicated mesh lost its Armature modifier.")
+
+    for mod in armature_modifiers:
+        mod.show_viewport = True
+        mod.show_render = True
 
     garment.data.materials.clear()
     garment.data.materials.append(material)
@@ -104,29 +100,28 @@ def duplicate_region(body, name, low, high, material, offset):
     bm.from_mesh(mesh)
     bm.faces.ensure_lookup_table()
 
-    # Quaternius glTF characters are Y-up. The bounds are computed in local
-    # coordinates so this remains stable even if the object has a transform.
-    ys = [v.co.y for v in bm.verts]
+    # Quaternius glTF characters use Y-up. Work in local space.
+    ys = [vertex.co.y for vertex in bm.verts]
     ymin, ymax = min(ys), max(ys)
 
     keep_faces = []
     for face in bm.faces:
-        y = face.calc_center_median().y
-        t = normalized_vertical(y, ymin, ymax)
+        t = normalized_vertical(face.calc_center_median().y, ymin, ymax)
         if low <= t <= high:
             keep_faces.append(face)
 
-    remove = [face for face in bm.faces if face not in keep_faces]
+    keep_ids = {face.index for face in keep_faces}
+    remove = [face for face in bm.faces if face.index not in keep_ids]
     bmesh.ops.delete(bm, geom=remove, context="FACES")
     bm.to_mesh(mesh)
     bm.free()
 
-    # Move the garment very slightly along normals to avoid z-fighting while
-    # preserving the original topology and skin weights.
+    # Offset the shell slightly to prevent z-fighting; vertex groups are
+    # untouched, so the original skinning remains identical.
     for vertex in mesh.vertices:
-        vertex.co += vertex.normal.normalized() * offset
+        if vertex.normal.length > 1e-8:
+            vertex.co += vertex.normal.normalized() * offset
 
-    # A small solidify layer makes the clothing a real opaque shell.
     solidify = garment.modifiers.new("SwimwearThickness", "SOLIDIFY")
     solidify.thickness = 0.0025
     solidify.offset = 0.0
@@ -141,20 +136,13 @@ def main():
     import_gltf(args.input)
 
     body = find_skinned_mesh()
-    minimum, maximum = world_bounds(body)
     print("Using skinned body:", body.name)
-    print("World bounds:", minimum, maximum)
 
     top_material = make_material("Swimwear_Top_Opaque", (0.035, 0.12, 0.18))
     bottom_material = make_material("Swimwear_Bottom_Opaque", (0.035, 0.12, 0.18))
 
     duplicate_region(
-        body,
-        "Swimwear_Top",
-        args.top_min,
-        args.top_max,
-        top_material,
-        args.offset,
+        body, "Swimwear_Top", args.top_min, args.top_max, top_material, args.offset
     )
     duplicate_region(
         body,
@@ -165,8 +153,6 @@ def main():
         args.offset,
     )
 
-    # Hide the original body only where the garment exists is intentionally
-    # avoided: the base body remains intact, and the opaque shell sits above it.
     output = os.path.abspath(args.output)
     os.makedirs(os.path.dirname(output), exist_ok=True)
     bpy.ops.export_scene.gltf(
