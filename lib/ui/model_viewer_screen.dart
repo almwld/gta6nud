@@ -3,7 +3,6 @@ import 'package:flutter_3d_controller/flutter_3d_controller.dart';
 
 import '../controllers/unified_animation_controller.dart';
 import '../engine/models/model_catalog.dart';
-import '../services/character_asset_service.dart';
 
 class ModelViewerScreen extends StatefulWidget {
   const ModelViewerScreen({
@@ -22,8 +21,6 @@ class ModelViewerScreen extends StatefulWidget {
 class _ModelViewerScreenState extends State<ModelViewerScreen> {
   late final Flutter3DController _controller;
   late final UnifiedAnimationController _animation;
-  final CharacterAssetService _assetService = const CharacterAssetService();
-
   double _progress = 0;
   late String _selectedUrl;
   List<String> _availableAnimations = const [];
