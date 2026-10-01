@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 
 enum BodyAnimationType { idle, breathing, thrusting, receiving, climaxing, recovering }
@@ -148,7 +147,7 @@ class BodyAnimationController extends ChangeNotifier {
         return;
       }
     }
-    _blendFactor = (_blendFactor + deltaTime * 5).clamp(0.0, 1.0);
+    _blendFactor = (_blendFactor + deltaTime * 5).clamp(0.0, 1.0).toDouble();
     _interpolateKeyframes();
     notifyListeners();
   }
@@ -167,7 +166,9 @@ class BodyAnimationController extends ChangeNotifier {
     }
     if (prev == null || next == null) { _applyKeyframe(keyframes.last); return; }
     final segmentDuration = next.time - prev.time;
-    final t = segmentDuration > 0 ? (_currentTime - prev.time) / segmentDuration : 0;
+    final double t = segmentDuration > 0
+        ? ((_currentTime - prev.time) / segmentDuration).toDouble()
+        : 0.0;
     _hipAngle = _lerp(prev.hipAngle, next.hipAngle, t);
     _spineCurve = _lerp(prev.spineCurve, next.spineCurve, t);
     _shoulderTilt = _lerp(prev.shoulderTilt, next.shoulderTilt, t);
