@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 
 /// Neutral character animation states shared by the character presentation layer.
