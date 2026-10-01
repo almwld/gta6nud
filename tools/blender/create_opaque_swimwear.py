@@ -100,13 +100,13 @@ def duplicate_region(body, name, low, high, material, offset):
     bm.from_mesh(mesh)
     bm.faces.ensure_lookup_table()
 
-    # Quaternius glTF characters use Y-up. Work in local space.
-    ys = [vertex.co.y for vertex in bm.verts]
-    ymin, ymax = min(ys), max(ys)
+    # Blender's imported glTF scene is Z-up. Use local Z for the garment bands.
+    zs = [vertex.co.z for vertex in bm.verts]
+    zmin, zmax = min(zs), max(zs)
 
     keep_faces = []
     for face in bm.faces:
-        t = normalized_vertical(face.calc_center_median().y, ymin, ymax)
+        t = normalized_vertical(face.calc_center_median().z, zmin, zmax)
         if low <= t <= high:
             keep_faces.append(face)
 
