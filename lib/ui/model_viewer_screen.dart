@@ -68,10 +68,12 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
 
     String? selected;
     for (final name in preferred) {
-      selected = _availableAnimations.cast<String?>().firstWhere(
-            (candidate) => candidate?.toLowerCase() == name.toLowerCase(),
-            orElse: () => null,
-          );
+      for (final candidate in _availableAnimations) {
+        if (candidate.toLowerCase() == name.toLowerCase()) {
+          selected = candidate;
+          break;
+        }
+      }
       if (selected != null) break;
     }
     selected ??= _availableAnimations.first;
