@@ -1,4 +1,14 @@
 include: package:flutter_lints/flutter.yaml
+
+# Legacy explicit simulation sources are intentionally outside the production
+# character presentation graph. They are preserved in-tree but are not part of
+# the analyzed/buildable character pipeline.
+analyzer:
+  exclude:
+    - lib/core/pleasure_manager.dart
+    - lib/core/orgasm_engine.dart
+    - lib/engine/fluids/cum_engine.dart
+
 linter:
   rules:
     prefer_const_constructors: false
