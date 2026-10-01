@@ -106,7 +106,8 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
                 children: [
                   _ControlButton(
                     icon: Icons.threed_rotation,
-                    onPressed: () => _controller.startRotation(rotationSpeed: 18),
+                    onPressed: () =>
+                        _controller.startRotation(rotationSpeed: 18),
                   ),
                   const SizedBox(width: 8),
                   _ControlButton(
