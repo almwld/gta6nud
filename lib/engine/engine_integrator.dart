@@ -34,7 +34,7 @@ class EngineIntegrator {
     }
 
     animation.update(deltaTime);
-    renderer.skinState.updateFromArousal(activity);
+    renderer.skinState.updateFromActivity(activity);
   }
 
   void render(Canvas canvas, Size size) {
