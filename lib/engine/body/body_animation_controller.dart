@@ -199,7 +199,7 @@ class BodyAnimationController extends ChangeNotifier {
   double get speedMultiplier => _speedMultiplier;
 
   void setSpeed(double speed) {
-    _speedMultiplier = speed.clamp(0.1, 5.0);
+    _speedMultiplier = speed.clamp(0.1, 5.0).toDouble();
     notifyListeners();
   }
 
