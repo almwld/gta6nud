@@ -29,16 +29,6 @@ class EngineIntegrator {
 
   void update(double deltaTime, Size size) {
     physics.update(deltaTime);
-
-    final activity = runtime.activityLevel;
-    if (activity > 0.66) {
-      animation.play(BodyAnimationType.breathing, speed: 1.25);
-    } else if (activity > 0.1) {
-      animation.play(BodyAnimationType.breathing, speed: 1.0);
-    } else {
-      animation.play(BodyAnimationType.idle);
-    }
-
     animation.update(deltaTime);
     // Material/skin state is updated atomically during renderer.render().
   }
