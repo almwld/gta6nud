@@ -1,0 +1,74 @@
+name: Process 3D Model
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "tools/blender/process_model.py"
+      - ".github/workflows/process-model.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Blender
+        run: |
+          set -euo pipefail
+          sudo snap install blender --classic
+
+      - name: Check source release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          assets="$(gh release view v1.0-models --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name')"
+          echo "$assets" | grep -Fx "anime_bikini_girl.glb" >/dev/null || {
+            echo "ERROR: release v1.0-models does not contain anime_bikini_girl.glb."
+            exit 1
+          }
+
+      - name: Download source GLB
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p assets/models
+          gh release download v1.0-models \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern "anime_bikini_girl.glb" \
+            --dir assets/models/ \
+            --clobber
+
+      - name: Validate source GLB
+        run: |
+          set -euo pipefail
+          file="assets/models/anime_bikini_girl.glb"
+          test -s "$file"
+          test "$(xxd -p -l 4 "$file")" = "676c5446"
+
+      - name: Process GLB
+        run: |
+          set -euo pipefail
+          blender --background --factory-startup --python tools/blender/process_model.py -- \
+            assets/models/anime_bikini_girl.glb \
+            assets/models/anime_bikini_girl_processed.glb
+
+      - name: Verify processed GLB
+        run: |
+          set -euo pipefail
+          file="assets/models/anime_bikini_girl_processed.glb"
+          test -s "$file"
+          test "$(xxd -p -l 4 "$file")" = "676c5446"
+          stat -c "Processed size: %s bytes" "$file"
+
+      - name: Upload processed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: anime-bikini-girl-processed-glb
+          path: assets/models/anime_bikini_girl_processed.glb
+          if-no-files-found: error
