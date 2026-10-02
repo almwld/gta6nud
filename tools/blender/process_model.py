@@ -116,7 +116,6 @@ def export_glb(filepath):
         export_skins=True,
         export_yup=True,
         export_animation_mode="ACTIONS",
-        export_skins=True,
     )
     if "FINISHED" not in result:
         raise RuntimeError(f"GLB export failed: {filepath}")
