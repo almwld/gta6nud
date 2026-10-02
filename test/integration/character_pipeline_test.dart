@@ -31,6 +31,17 @@ void main() {
     expect(manager.size, 0);
   });
 
+  test('resource manager handles a large transient cache without strong retention', () {
+    final manager = ResourceManager();
+    for (var i = 0; i < 100; i++) {
+      manager.getOrCreate('transient-$i', () => Object());
+    }
+    expect(manager.size, 100);
+    manager.clear();
+    manager.cleanup();
+    expect(manager.size, 0);
+  });
+
   test('character asset service returns one rigged character source', () async {
     const service = CharacterAssetService();
 
