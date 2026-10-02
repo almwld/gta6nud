@@ -43,17 +43,23 @@ class UnifiedAnimationController extends ChangeNotifier {
   void updateFromInput(
     Offset velocity, {
     required bool isGrounded,
+    bool isAbilityActive = false,
+    bool wasHit = false,
     double deltaTime = 0,
   }) {
-    final next = !isGrounded && velocity.dy < 0
+    final next = wasHit
+        ? CharacterAnimationState.hit
+        : isAbilityActive
+            ? CharacterAnimationState.abilityUse
+            : !isGrounded && velocity.dy < 0
         ? CharacterAnimationState.jump
         : !isGrounded
             ? CharacterAnimationState.fall
             : velocity.distance > 2.5
-            ? CharacterAnimationState.run
-            : velocity.distance > 0.1
-                ? CharacterAnimationState.walk
-                : CharacterAnimationState.idle;
+                ? CharacterAnimationState.run
+                : velocity.distance > 0.1
+                    ? CharacterAnimationState.walk
+                    : CharacterAnimationState.idle;
 
     transitionTo(next);
 
