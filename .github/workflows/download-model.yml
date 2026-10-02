@@ -15,14 +15,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download Anime Bikini Girl GLB
+      - name: Check GitHub Release asset
+        id: release
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.0-models --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Release v1.0-models or its metadata was not found."
+            echo "Create the release and upload anime_bikini_girl.glb before rerunning this workflow."
+            echo "Expected asset: https://github.com/${GITHUB_REPOSITORY}/releases/tag/v1.0-models"
+          fi
+
+      - name: Download Anime Bikini Girl GLB from GitHub Release
+        if: steps.release.outputs.exists == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p assets/models
-          curl --fail --location --retry 3 --retry-all-errors             -A "Mozilla/5.0"             -o assets/models/anime_bikini_girl.glb             "https://downloadforfree.gumroad.com/l/free-anime-bikini-girl-3d-model"
+          gh release download v1.0-models             --repo "${GITHUB_REPOSITORY}"             --pattern "anime_bikini_girl.glb"             --dir assets/models/             --clobber
 
-      - name: Verify GLB magic bytes and size
+      - name: Fallback instructions when Release is unavailable
+        if: steps.release.outputs.exists != 'true'
+        run: |
+          echo "No download was attempted."
+          echo "Manual setup:"
+          echo "1. Open the v1.0-models release in GitHub."
+          echo "2. Upload the legitimately obtained anime_bikini_girl.glb as a release asset."
+          echo "3. Re-run this workflow."
+          exit 1
+
+      - name: Verify GLB
         shell: bash
         run: |
           set -euo pipefail
@@ -36,18 +65,22 @@ jobs:
           echo "Magic: $MAGIC"
 
           if [ "$FILE_SIZE" -lt 1000000 ]; then
-            echo "ERROR: downloaded file is too small; likely an HTML landing page."
+            echo "ERROR: file is too small; refusing to treat it as a GLB."
             exit 1
           fi
 
           if [ "$MAGIC" != "676c5446" ]; then
-            echo "ERROR: file does not start with glTF binary magic bytes."
+            echo "ERROR: invalid GLB magic bytes. Expected 676c5446."
             exit 1
           fi
 
-          echo "GLB header validation passed."
+          if ! echo "$FILE_TYPE" | grep -Eiq 'glTF|GLB|binary'; then
+            echo "WARNING: file(1) returned an unexpected type: $FILE_TYPE"
+          fi
 
-      - name: Upload GLB artifact
+          echo "GLB validation passed."
+
+      - name: Upload verified GLB artifact
         uses: actions/upload-artifact@v4
         with:
           name: anime-bikini-girl-glb
