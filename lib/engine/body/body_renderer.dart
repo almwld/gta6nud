@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../rendering/material_pipeline.dart';
+import '../../core/quality_settings.dart';
 
 class SkinState {
   double redness;
@@ -48,6 +49,9 @@ class BodyRenderer {
   double _bodyRotation = 0;
   SkinState skinState = SkinState();
   bool _isLoaded = false;
+  QualitySettings quality = QualitySettings.defaults;
+
+  void setQuality(QualitySettings next) => quality = next;
 
   Future<void> loadAssets() async {
     try {
@@ -106,9 +110,13 @@ class BodyRenderer {
 
     _renderSkinLayer(canvas, bodyRect);
     _renderRednessLayer(canvas, bodyRect);
-    _renderSweatLayer(canvas, bodyRect);
-    _renderWarmthLayer(canvas, bodyRect);
-    _renderGoosebumpsLayer(canvas, bodyRect);
+    if (quality.level != QualityLevel.low) {
+      _renderSweatLayer(canvas, bodyRect);
+      _renderWarmthLayer(canvas, bodyRect);
+    }
+    if (quality.level == QualityLevel.high) {
+      _renderGoosebumpsLayer(canvas, bodyRect);
+    }
     _renderAnimationLayer(canvas, bodyRect);
   }
 
