@@ -22,7 +22,11 @@ class EngineIntegrator {
     required this.animation,
     required this.physics,
     this.quality = QualitySettings.defaults,
-  });
+  }) {
+    renderer.setQuality(quality);
+  }
+
+  //   });
 
   void update(double deltaTime, Size size) {
     physics.update(deltaTime);
@@ -42,6 +46,7 @@ class EngineIntegrator {
 
   void setQuality(QualitySettings next) {
     quality = next;
+    renderer.setQuality(next);
   }
 
   void render(Canvas canvas, Size size) {
