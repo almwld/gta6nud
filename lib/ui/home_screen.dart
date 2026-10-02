@@ -9,6 +9,7 @@ import 'package:gta6hub/engine/cinematics/cinematic_show_system.dart';
 import 'package:gta6hub/engine/cinematics/motion_recorder.dart';
 import 'package:gta6hub/ui/gta_hud.dart';
 import 'package:gta6hub/ui/director_sandbox.dart';
+import 'package:gta6hub/ui/screens/credits_screen.dart';
 import 'dart:math';
 
 class HomeScreen extends StatefulWidget {
@@ -113,6 +114,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
             const GTAHud(),
+            Positioned(top: 50, left: 15, child: IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreditsScreen())), icon: const Icon(Icons.info_outline), tooltip: 'Credits', color: Colors.white70)),
             Positioned(top: 50, right: 15, child: GestureDetector(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DirectorSandbox())), child: Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFF2A6D).withOpacity(0.5))), child: const Icon(Icons.dashboard_customize, color: Color(0xFFFF2A6D), size: 22)))),
             Positioned(bottom: 8, left: 10, child: Text('💧${_fluidOutput.activeDroplets} 🔥${_heatmap.activePoints}', style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 10))),
           ],
