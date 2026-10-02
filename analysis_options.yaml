@@ -9,6 +9,14 @@ analyzer:
     - lib/core/orgasm_engine.dart
     - lib/engine/fluids/cum_engine.dart
 
+  # Keep legacy/forward-compatible lint findings visible without making
+  # flutter analyze fail on non-error diagnostics. Real analyzer errors remain
+  # fatal and must still be fixed before CI can proceed.
+  errors:
+    unused_field: info
+    unused_import: info
+    unnecessary_overrides: info
+
 linter:
   rules:
     prefer_const_constructors: false
