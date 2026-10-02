@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gta6hub/core/character_runtime_state.dart';
+import 'package:gta6hub/core/quality_settings.dart';
 import 'package:gta6hub/engine/body/body_renderer.dart';
 import 'package:gta6hub/engine/body/body_animation_controller.dart';
 import 'package:gta6hub/engine/body/body_physics_controller.dart';
@@ -13,12 +14,14 @@ class EngineIntegrator {
   final BodyRenderer renderer;
   final BodyAnimationController animation;
   final BodyPhysicsController physics;
+  QualitySettings quality;
 
   EngineIntegrator({
     required this.runtime,
     required this.renderer,
     required this.animation,
     required this.physics,
+    this.quality = QualitySettings.defaults,
   });
 
   void update(double deltaTime, Size size) {
@@ -35,6 +38,10 @@ class EngineIntegrator {
 
     animation.update(deltaTime);
     // Material/skin state is updated atomically during renderer.render().
+  }
+
+  void setQuality(QualitySettings next) {
+    quality = next;
   }
 
   void render(Canvas canvas, Size size) {
