@@ -45,10 +45,10 @@ class UnifiedAnimationController extends ChangeNotifier {
     required bool isGrounded,
     double deltaTime = 0,
   }) {
-    final next = !isGrounded
-        ? CharacterAnimationState.fall
-        : !isGrounded && velocity.dy < 0
-            ? CharacterAnimationState.jump
+    final next = !isGrounded && velocity.dy < 0
+        ? CharacterAnimationState.jump
+        : !isGrounded
+            ? CharacterAnimationState.fall
             : velocity.distance > 2.5
             ? CharacterAnimationState.run
             : velocity.distance > 0.1
