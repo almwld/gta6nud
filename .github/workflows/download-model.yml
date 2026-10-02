@@ -1,0 +1,65 @@
+name: Download 3D Model
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/download-model.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Anime Bikini Girl GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/models
+          curl --fail --location --retry 3 --retry-all-errors             -A "Mozilla/5.0"             -o assets/models/anime_bikini_girl.glb             "https://downloadforfree.gumroad.com/l/free-anime-bikini-girl-3d-model"
+
+      - name: Verify GLB magic bytes and size
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="assets/models/anime_bikini_girl.glb"
+          FILE_SIZE=$(stat -c%s "$FILE")
+          MAGIC=$(xxd -p -l 4 "$FILE")
+          FILE_TYPE=$(file -b "$FILE")
+
+          echo "Size: $FILE_SIZE bytes"
+          echo "Type: $FILE_TYPE"
+          echo "Magic: $MAGIC"
+
+          if [ "$FILE_SIZE" -lt 1000000 ]; then
+            echo "ERROR: downloaded file is too small; likely an HTML landing page."
+            exit 1
+          fi
+
+          if [ "$MAGIC" != "676c5446" ]; then
+            echo "ERROR: file does not start with glTF binary magic bytes."
+            exit 1
+          fi
+
+          echo "GLB header validation passed."
+
+      - name: Upload GLB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: anime-bikini-girl-glb
+          path: assets/models/anime_bikini_girl.glb
+          if-no-files-found: error
+
+      - name: Commit GLB to repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/models/anime_bikini_girl.glb
+          git diff --cached --quiet || git commit -m "assets: add Anime Bikini Girl GLB (CC BY, ZeroVert)"
+          git push
