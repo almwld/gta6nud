@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gta6hub/core/resource_manager.dart';
 
 import 'package:gta6hub/controllers/unified_animation_controller.dart';
 import 'package:gta6hub/services/character_asset_service.dart';
