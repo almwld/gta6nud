@@ -2,34 +2,24 @@ name: 🔥 Prometheus CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
 
 jobs:
-  build:
-    name: 🚀 Build Android APK
+  analyze-and-test:
+    name: 🔎 Analyze & Test
     runs-on: ubuntu-latest
-
     steps:
       - name: 📥 Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 💙 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.5'
-          channel: 'stable'
-
-      - name: ☕ Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: 🛠️ Prepare Android Shell
-        run: |
-          if [ ! -d android ]; then
-            flutter create --platforms=android .
-          fi
+          flutter-version: "3.47.5"
+          channel: stable
 
       - name: 🧰 Prepare Asset Directories
         run: |
@@ -47,11 +37,58 @@ jobs:
       - name: 🧪 Test
         run: flutter test
 
-      - name: 🛠️ Build Release APK
+  build-apk:
+    name: 🛠️ Build Android APKs
+    needs: analyze-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v5
+
+      - name: 💙 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.5"
+          channel: stable
+
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: "17"
+
+      - name: 🛠️ Prepare Android Shell
+        run: |
+          if [ ! -d android ]; then
+            flutter create --platforms=android .
+          fi
+
+      - name: 🧰 Prepare Asset Directories
+        run: |
+          mkdir -p assets/icons assets/icons/svg assets/images assets/fonts assets/audio
+
+      - name: 📦 Install Dependencies
+        run: flutter pub get
+
+      - name: 🖼️ Generate Launcher Icons
+        run: dart run flutter_launcher_icons
+
+      - name: 🐞 Build Debug APK
+        run: flutter build apk --debug
+
+      - name: 🚀 Build Release APK
         run: flutter build apk --release
 
-      - name: 📤 Upload APK
+      - name: 📤 Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: gta6hub-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+
+      - name: 📤 Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: gta6hub-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
