@@ -24,7 +24,7 @@ The workflow downloads it with:
 
 `gh release download v1.0-models --pattern "anime_bikini_girl.glb" --dir assets/models/`
 
-GitHub CLI supports selecting release assets by tag and glob pattern. citeturn0search0
+GitHub CLI is used to select the exact release asset by tag and filename pattern.
 
 ## Manual contributor workflow
 
