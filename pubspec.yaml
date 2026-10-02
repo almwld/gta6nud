@@ -29,6 +29,7 @@ flutter:
     - assets/fonts/
     - assets/icon-gta6hub.png
     - assets/audio/
+    - assets/models/anime_bikini_girl.glb
 
 flutter_launcher_icons:
   android: true
