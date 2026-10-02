@@ -44,8 +44,18 @@ class ModelCatalog {
     rigged: true,
   );
 
+  static const animeBikiniGirl = ModelAsset(
+    id: 'anime-bikini-girl-zerovert',
+    name: 'Anime Bikini Girl 3D Model',
+    url: 'assets/models/anime_bikini_girl.glb',
+    license: 'CC BY — ZeroVert',
+    style: 'female-bikini',
+    rigged: true,
+  );
+
   static const all = <ModelAsset>[
     humanBase,
     adultFemaleRigged,
+    animeBikiniGirl,
   ];
 }
