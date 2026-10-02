@@ -34,7 +34,7 @@ class EngineIntegrator {
     }
 
     animation.update(deltaTime);
-    renderer.skinState.updateFromActivity(activity);
+    // Material/skin state is updated atomically during renderer.render().
   }
 
   void render(Canvas canvas, Size size) {
