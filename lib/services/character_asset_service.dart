@@ -34,6 +34,12 @@ class CharacterAsset {
   final String rigId;
   final bool isRigged;
 
+  /// The resolved skeleton identifier used by the animation layer.
+  String get skeletonId => rigId;
+
+  /// Clothing is considered attached when a combined outfit asset is supplied.
+  bool get clothingAttachedToSkeleton => hasCombinedOutfit && isRigged;
+
   bool get hasCombinedOutfit => outfit.combinedGlbAsset != null;
 }
 
@@ -59,6 +65,10 @@ class CharacterAssetService {
 
     final source = outfit.combinedGlbAsset ?? baseModel.url;
     final rigId = '${baseModel.id}:humanoid';
+
+    if (outfit.combinedGlbAsset != null && outfit.combinedGlbAsset!.isEmpty) {
+      throw StateError('Combined outfit asset path cannot be empty.');
+    }
 
     return CharacterAsset(
       source: source,
