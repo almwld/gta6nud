@@ -53,5 +53,15 @@ void main() {
     expect(character.baseModel.rigged, isTrue);
     expect(character.isRigged, isTrue);
     expect(character.rigId, contains('humanoid'));
+    expect(character.skeletonId, character.rigId);
+    expect(character.clothingAttachedToSkeleton, isFalse);
+
+    const outfitted = OutfitConfig(combinedGlbAsset: 'assets/models/character_outfit.glb');
+    final withOutfit = await service.loadCompleteCharacter(
+      type: CharacterType.adultFemaleRigged,
+      outfit: outfitted,
+    );
+    expect(withOutfit.hasCombinedOutfit, isTrue);
+    expect(withOutfit.clothingAttachedToSkeleton, isTrue);
   });
 }
