@@ -26,7 +26,6 @@ class EngineIntegrator {
     renderer.setQuality(quality);
   }
 
-  //   });
 
   void update(double deltaTime, Size size) {
     physics.update(deltaTime);
