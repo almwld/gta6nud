@@ -8,6 +8,9 @@ enum CharacterAnimationState {
   walk,
   run,
   fall,
+  jump,
+  abilityUse,
+  hit,
 }
 
 /// Single state machine for character presentation transitions.
@@ -44,7 +47,9 @@ class UnifiedAnimationController extends ChangeNotifier {
   }) {
     final next = !isGrounded
         ? CharacterAnimationState.fall
-        : velocity.distance > 2.5
+        : !isGrounded && velocity.dy < 0
+            ? CharacterAnimationState.jump
+            : velocity.distance > 2.5
             ? CharacterAnimationState.run
             : velocity.distance > 0.1
                 ? CharacterAnimationState.walk
