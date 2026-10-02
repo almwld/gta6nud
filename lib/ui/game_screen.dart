@@ -11,19 +11,9 @@ class GameScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // طبقة المحرك (الرسوم والفيزياء)
-          CustomPaint(
-            painter: GamePainter(
-              engine: engine,
-              arousal: engine.manager.receiverPleasure,
-            ),
-            size: Size.infinite,
-          ),
-          // طبقة الـ HUD (الأزرار والعدادات التي صممتها)
-          // هنا يمكنك استدعاء الـ HUD الخاص بك
-        ],
+      body: CustomPaint(
+        painter: GamePainter(engine: engine),
+        size: Size.infinite,
       ),
     );
   }
