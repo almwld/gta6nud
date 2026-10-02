@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import '../engine/models/model_catalog.dart';
 
@@ -48,7 +49,27 @@ class CharacterAsset {
 /// Asset selection stays outside widgets; GLB rendering and animation control
 /// remain the responsibility of flutter_3d_controller.
 class CharacterAssetService {
+  static const String animeBikiniGirlPath =
+      'assets/models/anime_bikini_girl.glb';
+
   const CharacterAssetService();
+
+  /// Loads the bundled GLB once the download workflow has supplied it.
+  Future<CharacterAsset> loadAnimeBikiniGirl() async {
+    final data = await rootBundle.load(animeBikiniGirlPath);
+    if (data.lengthInBytes < 4 ||
+        data.buffer.asUint8List(data.offsetInBytes, 4).join(',') != '103,108,84,70') {
+      throw StateError('Invalid GLB asset: $animeBikiniGirlPath');
+    }
+
+    return CharacterAsset(
+      source: animeBikiniGirlPath,
+      baseModel: ModelCatalog.animeBikiniGirl,
+      outfit: const OutfitConfig(combinedGlbAsset: animeBikiniGirlPath, label: 'bikini'),
+      rigId: 'anime-bikini-girl:humanoid',
+      isRigged: true,
+    );
+  }
 
   Future<CharacterAsset> loadCompleteCharacter({
     required CharacterType type,
