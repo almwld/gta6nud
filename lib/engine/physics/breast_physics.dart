@@ -50,6 +50,9 @@ class BreastPhysics {
   final double damping;
   late final SoftBodyPhysics _simulation;
 
+  v.Vector3 get leftAnchorPosition => _simulation.particles[0].position.clone();
+  v.Vector3 get rightAnchorPosition => _simulation.particles[3].position.clone();
+
   List<SoftBodyParticle> get leftNodes =>
       List.unmodifiable(_simulation.particles.sublist(1, 3));
   List<SoftBodyParticle> get rightNodes =>
