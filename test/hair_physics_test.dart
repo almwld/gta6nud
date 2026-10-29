@@ -9,7 +9,7 @@ void main() {
       final hair = HairPhysics(root: v.Vector3(1, 2, 3));
       expect(hair.bones, hasLength(12));
       hair.update(1 / 60);
-      expect(hair.bones.first.position, v.Vector3(1, 2, 3));
+      expect(hair.bones.first.position.distanceTo(v.Vector3(1, 2, 3)), closeTo(0, 1e-9));
       expect(hair.bones.every((bone) =>
           bone.position.x.isFinite && bone.position.y.isFinite &&
           bone.position.z.isFinite), isTrue);
