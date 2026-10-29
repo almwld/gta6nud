@@ -20,7 +20,8 @@ void main() {
       physics.update(1 / 60);
       expect(physics.leftNodes.first.position.y, lessThan(before.y));
       physics.setAnchors(left: v.Vector3(-0.2, 0, 0), right: v.Vector3(0.2, 0, 0));
-      expect(physics.leftNodes.first.position.x, closeTo(-0.2, 1e-9));
+      expect(physics.leftAnchorPosition.x, closeTo(-0.2, 1e-9));
+      expect(physics.rightAnchorPosition.x, closeTo(0.2, 1e-9));
     });
 
     test('accepts body collision spheres', () {
