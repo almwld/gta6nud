@@ -22,7 +22,7 @@ void main() {
     final system = IntimateInteractionSystem(
       consent: ConsentSystem(prompt: (_) async => ConsentResponse.notNow),
       arc: EmotionalArc(),
-      dispatch: (_) async => dispatchCount++,
+      dispatch: (_) async { dispatchCount++; },
     );
 
     final result = await system.perform(sample());
@@ -37,7 +37,7 @@ void main() {
     final system = IntimateInteractionSystem(
       consent: ConsentSystem(prompt: (_) async => ConsentResponse.yes),
       arc: EmotionalArc(),
-      dispatch: (command) async => received = command,
+      dispatch: (command) async { received = command; },
     );
 
     final result = await system.perform(sample(type: InteractionType.gaze));
@@ -80,7 +80,7 @@ void main() {
     final system = IntimateInteractionSystem(
       consent: ConsentSystem(prompt: (_) async => ConsentResponse.yes),
       arc: EmotionalArc(),
-      dispatch: (_) async => throw StateError('animation adapter failed'),
+      dispatch: (_) async { throw StateError('animation adapter failed'); },
     );
 
     final result = await system.perform(sample());
