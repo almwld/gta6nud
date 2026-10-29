@@ -156,7 +156,7 @@ def bind_meshes(meshes, armature):
         bpy.ops.object.select_all(action="DESELECT")
         mesh.select_set(True)
         armature.select_set(True)
-        bpy.context.view_layer.objects.active = mesh
+        bpy.context.view_layer.objects.active = armature
         try:
             bpy.ops.object.parent_set(type="ARMATURE_AUTO")
             if not any(mod.type == "ARMATURE" and mod.object == armature for mod in mesh.modifiers):
@@ -169,7 +169,7 @@ def bind_meshes(meshes, armature):
             bpy.ops.object.select_all(action="DESELECT")
             mesh.select_set(True)
             armature.select_set(True)
-            bpy.context.view_layer.objects.active = mesh
+            bpy.context.view_layer.objects.active = armature
             try:
                 bpy.ops.object.parent_set(type="ARMATURE_ENVELOPE")
             except RuntimeError as fallback_exc:
