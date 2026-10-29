@@ -65,6 +65,7 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
       CharacterAnimationState.run => const ['Run', 'run'],
       CharacterAnimationState.fall => const ['Fall', 'fall'],
       CharacterAnimationState.jump => const ['Jump', 'jump'],
+      CharacterAnimationState.dance => const ['Dance', 'dance', 'Dancing'],
     };
 
     String? selected;
@@ -183,6 +184,16 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
                           label: 'Fall',
                           onPressed: () =>
                               _transition(CharacterAnimationState.fall),
+                        ),
+                        _StateButton(
+                          label: 'Jump',
+                          onPressed: () =>
+                              _transition(CharacterAnimationState.jump),
+                        ),
+                        _StateButton(
+                          label: 'Dance',
+                          onPressed: () =>
+                              _transition(CharacterAnimationState.dance),
                         ),
                       ],
                     ),
