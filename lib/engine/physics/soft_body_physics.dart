@@ -75,7 +75,7 @@ class SoftBodyPhysics {
 
   void update(double deltaTime, {List<PhysicsSphere> colliders = const []}) {
     if (!deltaTime.isFinite || deltaTime <= 0) return;
-    final dt = math.min(deltaTime, 1 / 20);
+    final dt = math.min(deltaTime, 1 / 20).toDouble();
     final dt2 = dt * dt;
     final retention = (1 - damping).clamp(0.0, 1.0).toDouble();
 
