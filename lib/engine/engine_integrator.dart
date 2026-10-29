@@ -17,6 +17,7 @@ class EngineIntegrator {
   final SoftBodyPhysics softBodyPhysics;
   final HairPhysics hairPhysics;
   final BreastPhysics breastPhysics;
+  final List<PhysicsSphere> bodyColliders;
   QualitySettings quality;
 
   EngineIntegrator({
@@ -27,6 +28,7 @@ class EngineIntegrator {
     SoftBodyPhysics? softBodyPhysics,
     HairPhysics? hairPhysics,
     BreastPhysics? breastPhysics,
+    this.bodyColliders = const <PhysicsSphere>[],
     this.quality = QualitySettings.defaults,
   })  : softBodyPhysics = softBodyPhysics ?? SoftBodyPhysics(),
         hairPhysics = hairPhysics ?? HairPhysics(),
@@ -36,9 +38,9 @@ class EngineIntegrator {
 
   void update(double deltaTime, Size size) {
     physics.update(deltaTime);
-    softBodyPhysics.update(deltaTime);
-    hairPhysics.update(deltaTime);
-    breastPhysics.update(deltaTime);
+    softBodyPhysics.update(deltaTime, colliders: bodyColliders);
+    hairPhysics.update(deltaTime, bodyColliders: bodyColliders);
+    breastPhysics.update(deltaTime, bodyColliders: bodyColliders);
 
     final activity = runtime.activityLevel;
     if (activity > 0.66) {
