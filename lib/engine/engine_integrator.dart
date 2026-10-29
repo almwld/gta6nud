@@ -4,6 +4,9 @@ import 'package:gta6hub/core/quality_settings.dart';
 import 'package:gta6hub/engine/body/body_renderer.dart';
 import 'package:gta6hub/engine/body/body_animation_controller.dart';
 import 'package:gta6hub/engine/body/body_physics_controller.dart';
+import 'package:gta6hub/engine/physics/soft_body_physics.dart';
+import 'package:gta6hub/engine/physics/hair_physics.dart';
+import 'package:gta6hub/engine/physics/breast_physics.dart';
 
 /// Unified character presentation loop.
 ///
@@ -14,6 +17,9 @@ class EngineIntegrator {
   final BodyRenderer renderer;
   final BodyAnimationController animation;
   final BodyPhysicsController physics;
+  final SoftBodyPhysics softBodyPhysics;
+  final HairPhysics hairPhysics;
+  final BreastPhysics breastPhysics;
   QualitySettings quality;
 
   EngineIntegrator({
@@ -21,6 +27,9 @@ class EngineIntegrator {
     required this.renderer,
     required this.animation,
     required this.physics,
+    SoftBodyPhysics? softBodyPhysics,
+    HairPhysics? hairPhysics,
+    BreastPhysics? breastPhysics,
     this.quality = QualitySettings.defaults,
   }) {
     renderer.setQuality(quality);
@@ -28,7 +37,7 @@ class EngineIntegrator {
 
 
   void update(double deltaTime, Size size) {
-    physics.update(deltaTime);
+    physics.update(deltaTime);\n    softBodyPhysics.update(deltaTime);\n    hairPhysics.update(deltaTime);\n    breastPhysics.update(deltaTime);
 
     final activity = runtime.activityLevel;
     if (activity > 0.66) {
