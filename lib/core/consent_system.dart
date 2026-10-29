@@ -110,8 +110,10 @@ class ConsentSystem {
   void resetForNewScene() {
     _withdrawn = false;
     _granted.clear();
-    _blocked.clear();
     _statuses.clear();
+    for (final action in _blocked) {
+      _statuses[action] = ConsentStatus.blocked;
+    }
   }
 
   ConsentStatus statusFor(ConsentAction action) {
