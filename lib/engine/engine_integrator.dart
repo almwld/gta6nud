@@ -8,10 +8,7 @@ import 'package:gta6hub/engine/physics/soft_body_physics.dart';
 import 'package:gta6hub/engine/physics/hair_physics.dart';
 import 'package:gta6hub/engine/physics/breast_physics.dart';
 
-/// Unified character presentation loop.
-///
-/// Gameplay/simulation code supplies a neutral runtime state; this class owns
-/// the single per-frame order for physics, animation and rendering state.
+/// Unified character presentation loop: physics, animation and rendering state.
 class EngineIntegrator {
   final CharacterRuntimeState runtime;
   final BodyRenderer renderer;
@@ -31,13 +28,17 @@ class EngineIntegrator {
     HairPhysics? hairPhysics,
     BreastPhysics? breastPhysics,
     this.quality = QualitySettings.defaults,
-  }) {
+  })  : softBodyPhysics = softBodyPhysics ?? SoftBodyPhysics(),
+        hairPhysics = hairPhysics ?? HairPhysics(),
+        breastPhysics = breastPhysics ?? BreastPhysics() {
     renderer.setQuality(quality);
   }
 
-
   void update(double deltaTime, Size size) {
-    physics.update(deltaTime);\n    softBodyPhysics.update(deltaTime);\n    hairPhysics.update(deltaTime);\n    breastPhysics.update(deltaTime);
+    physics.update(deltaTime);
+    softBodyPhysics.update(deltaTime);
+    hairPhysics.update(deltaTime);
+    breastPhysics.update(deltaTime);
 
     final activity = runtime.activityLevel;
     if (activity > 0.66) {
@@ -49,7 +50,6 @@ class EngineIntegrator {
     }
 
     animation.update(deltaTime);
-    // Material/skin state is updated atomically during renderer.render().
   }
 
   void setQuality(QualitySettings next) {
