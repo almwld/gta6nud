@@ -64,7 +64,7 @@ void main() {
     var stopped = false;
     final consent = ConsentSystem(
       prompt: (_) async => ConsentResponse.yes,
-      onWithdraw: () => stopped = true,
+      onWithdraw: () { stopped = true; },
     );
 
     expect(await consent.request(ConsentAction.embrace), isTrue);
