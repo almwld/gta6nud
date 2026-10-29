@@ -13,7 +13,7 @@ void main() {
       controller.updateFromInput(const Offset(3, 0), isGrounded: true);
       expect(controller.currentState, CharacterAnimationState.run);
       controller.updateFromInput(Offset.zero, isGrounded: true, isAbilityActive: true);
-      expect(controller.currentState, CharacterAnimationState.abilityUse);
+      expect(controller.currentState, CharacterAnimationState.ability);
       controller.updateFromInput(Offset.zero, isGrounded: true, wasHit: true);
       expect(controller.currentState, CharacterAnimationState.hit);
       controller.dispose();
@@ -23,6 +23,7 @@ void main() {
       final controller = UnifiedAnimationController();
       controller.transitionTo(CharacterAnimationState.walk, duration: 0.2);
       expect(controller.isTransitioning, isTrue);
+      expect(controller.blendWeights.values.reduce((a, b) => a + b), closeTo(1, 1e-9));
       controller.update(0.1);
       expect(controller.transitionProgress, closeTo(0.5, 1e-9));
       controller.update(0.1);
