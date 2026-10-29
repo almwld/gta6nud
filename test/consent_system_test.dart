@@ -75,8 +75,10 @@ void main() {
     expect(consent.grantedActions, isEmpty);
     expect(await consent.request(ConsentAction.embrace), isFalse);
 
+    consent.setBoundary(ConsentAction.kiss);
     consent.resetForNewScene();
     expect(consent.isWithdrawn, isFalse);
     expect(consent.isGranted(ConsentAction.embrace), isFalse);
+    expect(consent.statusFor(ConsentAction.kiss), ConsentStatus.blocked);
   });
 }
