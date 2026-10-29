@@ -83,8 +83,7 @@ class SoftBodyPhysics {
       if (particle.inverseMass == 0) continue;
       final current = particle.position.clone();
       final velocity = (particle.position - particle.previousPosition) * retention;
-      particle.position
-        ..setFrom(particle.position + velocity + gravity * dt2);
+      particle.position.setFrom(particle.position + velocity + gravity * dt2);
       particle.previousPosition.setFrom(current);
     }
 
