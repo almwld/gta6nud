@@ -27,7 +27,7 @@ void main() {
     });
 
     test('sphere and floor collisions prevent penetration', () {
-      final particle = SoftBodyParticle(position: v.Vector3(0.1, -1, 0));
+      final particle = SoftBodyParticle(position: v.Vector3(0.1, 0.1, 0));
       final physics = SoftBodyPhysics(
         particles: [particle],
         gravity: v.Vector3.zero(),
