@@ -9,6 +9,7 @@ enum CharacterAnimationState {
   run,
   fall,
   jump,
+  dance,
   abilityUse,
   hit,
 }
