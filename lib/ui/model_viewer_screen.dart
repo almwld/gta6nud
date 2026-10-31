@@ -61,9 +61,9 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
         _availableAnimations = const [];
       });
       final rig = imported.inspection;
-      final message = rig.alreadyRigged
-          ? 'تم استيراد المجسم والعثور على الهيكل العظمي.'
-          : 'تم إنشاء هيكل عظمي وأوزان Skin تلقائياً للمجسم.';
+      final message = rig.autoRigApplied
+          ? 'تم إنشاء الهيكل العظمي وأوزان Skin تلقائياً.'
+          : 'تم استيراد المجسم والعثور على هيكل عظمي مدمج.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
@@ -286,9 +286,9 @@ class _ImportSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final info = model.inspection;
-    final rigText = info.alreadyRigged
-        ? 'هيكل مدمج: ${info.jointCount} عظمة'
-        : 'Auto-Rig — ${info.jointCount} عظمة';
+    final rigText = info.autoRigApplied
+        ? 'Auto-Rig: ${info.jointCount} عظمة'
+        : 'هيكل مدمج: ${info.jointCount} عظمة';
     return Material(
       color: Colors.black.withOpacity(.78),
       borderRadius: BorderRadius.circular(12),
