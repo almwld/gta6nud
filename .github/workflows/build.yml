@@ -79,6 +79,12 @@ jobs:
       - name: 🖼️ Generate Launcher Icons
         run: dart run flutter_launcher_icons
 
+      - name: 🩹 Allow legacy WebView ProGuard rule on AGP 9
+        run: |
+          # flutter_inappwebview_android 1.1.3 still requests proguard-android.txt.
+          # AGP 9 rejects that legacy file; this documented compatibility switch is temporary.
+          printf '\nandroid.r8.proguardAndroidTxt.disallowed=false\n' >> android/gradle.properties
+
       - name: 🐞 Build Debug APK
         run: flutter build apk --debug
 
