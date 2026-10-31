@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'stable_mesh_buffer.dart';
+
 /// Result of one vertex-based soft-body contact pass.
 class ContactSolveResult {
   const ContactSolveResult({
@@ -33,6 +35,28 @@ class ContactSolveResult {
 /// triangle-level narrow phase and structural constraints.
 class SoftBodyContactSolver {
   SoftBodyContactSolver._();
+
+  /// Solves contact using mutable buffers owned by stable mesh states.
+  /// Rest positions remain untouched; corrections affect current positions only.
+  static ContactSolveResult solveBuffers({
+    required StableMeshBuffer upper,
+    required StableMeshBuffer lower,
+    required double contactThreshold,
+    double stiffness = 0.5,
+    double upperWeight = 0.2,
+    double lowerWeight = 0.8,
+    int maxContacts = 20000,
+  }) {
+    return solve(
+      upperPositions: upper.currentPositions,
+      lowerPositions: lower.currentPositions,
+      contactThreshold: contactThreshold,
+      stiffness: stiffness,
+      upperWeight: upperWeight,
+      lowerWeight: lowerWeight,
+      maxContacts: maxContacts,
+    );
+  }
 
   /// Detect and resolve proximity between two independently movable point sets.
   ///
