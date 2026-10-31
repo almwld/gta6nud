@@ -75,4 +75,45 @@ void main() {
     runtime.dispose();
   });
 
+
+  test('EngineIntegrator resolves local mesh contact through node transforms', () {
+    final first = StableMeshBuffer(Float32List.fromList([0, 0, 0]));
+    final second = StableMeshBuffer(Float32List.fromList([0, 0, 0]));
+    final transformA = v.Matrix4.identity();
+    final transformB = v.Matrix4.translationValues(0.5, 0, 0);
+    final runtime = CharacterRuntimeState();
+    final animation = BodyAnimationController();
+    final physics = BodyPhysicsController();
+    final engine = EngineIntegrator(
+      runtime: runtime,
+      renderer: BodyRenderer(),
+      animation: animation,
+      physics: physics,
+      contactBindings: [
+        SoftBodyContactBinding(
+          first: first,
+          second: second,
+          firstTransform: transformA,
+          secondTransform: transformB,
+          contactThreshold: 1,
+          stiffness: 1,
+        ),
+      ],
+    );
+
+    engine.update(EngineIntegrator.fixedTimeStep, const Size(800, 600));
+
+    final worldA = transformA.transform3(
+      v.Vector3(first.currentPositions[0], first.currentPositions[1], first.currentPositions[2]),
+    );
+    final worldB = transformB.transform3(
+      v.Vector3(second.currentPositions[0], second.currentPositions[1], second.currentPositions[2]),
+    );
+    expect((worldA - worldB).length, closeTo(1, 1e-5));
+
+    animation.dispose();
+    physics.dispose();
+    runtime.dispose();
+  });
+
 }
