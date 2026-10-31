@@ -118,7 +118,8 @@ void main() {
     expect((accessors[attributes['JOINTS_0'] as int] as Map)['componentType'], 5123);
     expect((accessors[attributes['WEIGHTS_0'] as int] as Map)['componentType'], 5126);
     expect((nodes[1] as Map)['children'], isNotEmpty);
-    expect((nodes[1] as Map)['skin'], 0);
+    // The original mesh node remains at index 0; generated joints are appended.
+    expect((nodes[0] as Map)['skin'], 0);
     expect(ByteData.sublistView(output).getUint32(8, Endian.little), output.length);
   });
 
