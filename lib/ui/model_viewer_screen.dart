@@ -3,6 +3,7 @@ import 'package:flutter_3d_controller/flutter_3d_controller.dart';
 
 import '../controllers/unified_animation_controller.dart';
 import '../engine/models/model_catalog.dart';
+import '../services/local_glb_import_service.dart';
 
 class ModelViewerScreen extends StatefulWidget {
   const ModelViewerScreen({
@@ -21,10 +22,13 @@ class ModelViewerScreen extends StatefulWidget {
 class _ModelViewerScreenState extends State<ModelViewerScreen> {
   late final Flutter3DController _controller;
   late final UnifiedAnimationController _animation;
+  final LocalGlbImportService _importService = const LocalGlbImportService();
   double _progress = 0;
   late String _selectedUrl;
+  ImportedGlb? _importedModel;
   List<String> _availableAnimations = const [];
   bool _loadingAnimations = false;
+  bool _importing = false;
 
   @override
   void initState() {
@@ -42,6 +46,35 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
     _controller.stopAnimation();
     _controller.stopRotation();
     super.dispose();
+  }
+
+  Future<void> _pickLocalGlb() async {
+    if (_importing) return;
+    setState(() => _importing = true);
+    try {
+      final imported = await _importService.pickAndImport();
+      if (!mounted || imported == null) return;
+      setState(() {
+        _importedModel = imported;
+        _selectedUrl = imported.dataUri;
+        _progress = 0;
+        _availableAnimations = const [];
+      });
+      final rig = imported.inspection;
+      final message = rig.alreadyRigged
+          ? 'تم استيراد المجسم والعثور على الهيكل العظمي.'
+          : 'تم الاستيراد. لم يوجد Skin؛ أُنشئ تحليل أولي لمواضع العظام فقط.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل استيراد GLB: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
   }
 
   Future<void> _loadAnimations() async {
@@ -86,17 +119,34 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final catalogSelection = ModelCatalog.all.any((model) => model.url == _selectedUrl)
+        ? _selectedUrl
+        : null;
     return Scaffold(
       backgroundColor: const Color(0xFF080B12),
       appBar: AppBar(
         title: Text(widget.title),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            tooltip: 'استيراد GLB من الهاتف',
+            onPressed: _importing ? null : _pickLocalGlb,
+            icon: _importing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.file_open),
+          ),
+        ],
       ),
       body: Stack(
         children: [
           Positioned.fill(
             child: Flutter3DViewer(
+              key: ValueKey(_selectedUrl),
               controller: _controller,
               src: _selectedUrl,
               activeGestureInterceptor: true,
@@ -125,7 +175,8 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
             child: SafeArea(
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
-                  value: _selectedUrl,
+                  value: catalogSelection,
+                  hint: const Text('اختر مجسماً جاهزاً'),
                   dropdownColor: const Color(0xFF10151F),
                   style: const TextStyle(color: Colors.white),
                   isExpanded: true,
@@ -140,6 +191,7 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
                     if (value == null || value == _selectedUrl) return;
                     setState(() {
                       _selectedUrl = value;
+                      _importedModel = null;
                       _progress = 0;
                       _availableAnimations = const [];
                     });
@@ -148,6 +200,13 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
               ),
             ),
           ),
+          if (_importedModel != null)
+            Positioned(
+              top: 66,
+              left: 12,
+              right: 12,
+              child: _ImportSummary(model: _importedModel!),
+            ),
           Positioned(
             left: 12,
             right: 12,
@@ -165,23 +224,19 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
                       children: [
                         _StateButton(
                           label: 'Idle',
-                          onPressed: () =>
-                              _transition(CharacterAnimationState.idle),
+                          onPressed: () => _transition(CharacterAnimationState.idle),
                         ),
                         _StateButton(
                           label: 'Walk',
-                          onPressed: () =>
-                              _transition(CharacterAnimationState.walk),
+                          onPressed: () => _transition(CharacterAnimationState.walk),
                         ),
                         _StateButton(
                           label: 'Run',
-                          onPressed: () =>
-                              _transition(CharacterAnimationState.run),
+                          onPressed: () => _transition(CharacterAnimationState.run),
                         ),
                         _StateButton(
                           label: 'Fall',
-                          onPressed: () =>
-                              _transition(CharacterAnimationState.fall),
+                          onPressed: () => _transition(CharacterAnimationState.fall),
                         ),
                       ],
                     ),
@@ -192,8 +247,7 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
                     children: [
                       _ControlButton(
                         icon: Icons.threed_rotation,
-                        onPressed: () =>
-                            _controller.startRotation(rotationSpeed: 18),
+                        onPressed: () => _controller.startRotation(rotationSpeed: 18),
                       ),
                       const SizedBox(width: 8),
                       _ControlButton(
@@ -224,6 +278,51 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
   }
 }
 
+class _ImportSummary extends StatelessWidget {
+  const _ImportSummary({required this.model});
+
+  final ImportedGlb model;
+
+  @override
+  Widget build(BuildContext context) {
+    final info = model.inspection;
+    final rigText = info.alreadyRigged
+        ? 'هيكل مدمج: ${info.jointCount} عظمة'
+        : 'بدون Skin — ${info.rigLandmarks.length} موضعاً تقديرياً';
+    return Material(
+      color: Colors.black.withOpacity(.78),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              model.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${info.meshCount} Mesh  •  ${info.nodeCount} Nodes  •  ${info.animationNames.length} Animations',
+              style: const TextStyle(color: Colors.white70, fontSize: 11),
+            ),
+            Text(
+              rigText,
+              style: TextStyle(
+                color: info.alreadyRigged ? Colors.greenAccent : Colors.orangeAccent,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _StateButton extends StatelessWidget {
   const _StateButton({required this.label, required this.onPressed});
 
@@ -234,10 +333,7 @@ class _StateButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: FilledButton.tonal(
-        onPressed: onPressed,
-        child: Text(label),
-      ),
+      child: FilledButton.tonal(onPressed: onPressed, child: Text(label)),
     );
   }
 }
