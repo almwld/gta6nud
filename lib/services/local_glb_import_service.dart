@@ -335,9 +335,9 @@ class LocalGlbImportService {
       for (var diagonal = 0; diagonal < 4; diagonal++) {
         data.setFloat32(offset + (diagonal * 4 + diagonal) * 4, 1, Endian.little);
       }
-      data.setFloat32(offset + 12, -bones[i].x, Endian.little);
-      data.setFloat32(offset + 28, -bones[i].y, Endian.little);
-      data.setFloat32(offset + 44, -bones[i].z, Endian.little);
+      data.setFloat32(offset + 48, -bones[i].x, Endian.little);
+      data.setFloat32(offset + 52, -bones[i].y, Endian.little);
+      data.setFloat32(offset + 56, -bones[i].z, Endian.little);
     }
     return bytes;
   }
