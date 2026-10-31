@@ -117,6 +117,7 @@ class LocalGlbImportService {
     final document = parsed.document;
     final meshes = _list(document['meshes']);
     final nodes = _list(document['nodes']);
+    document['nodes'] = nodes;
     final skins = _list(document['skins']);
     if (skins.isNotEmpty) return Uint8List.fromList(bytes);
 
@@ -239,6 +240,7 @@ class LocalGlbImportService {
           .toList(growable: false),
       hasPositionBounds: bounds != null,
       rigLandmarks: landmarks,
+      autoRigApplied: skins.whereType<Map>().any((skin) => skin['name'] == 'AutoRig_Humanoid'),
     );
   }
 
