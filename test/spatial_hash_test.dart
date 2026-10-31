@@ -56,6 +56,13 @@ void main() {
       expect(hash.length, 0);
     });
 
+    test('keeps prior entry when replacement bounds are rejected', () {
+      final hash = SpatialHash3D<int>(cellSize: 1, maxCellsPerItem: 4);
+      hash.insert(7, box(0, 1));
+      expect(() => hash.insert(7, box(0, 10)), throwsArgumentError);
+      expect(hash.query(box(0, 1)), <int>[7]);
+    });
+
     test('guards against pathological cell coverage', () {
       final hash = SpatialHash3D<int>(cellSize: 0.01, maxCellsPerItem: 8);
       expect(() => hash.insert(1, box(0, 10)), throwsArgumentError);
