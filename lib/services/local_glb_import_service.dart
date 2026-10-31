@@ -153,26 +153,44 @@ class LocalGlbImportService {
       'joints': jointNodes,
     });
 
-    var processedPrimitiveCount = 0;
-    for (final node in nodes.whereType<Map>()) {
-      final meshIndex = node['mesh'];
-      if (meshIndex is! int || meshIndex < 0 || meshIndex >= meshes.length) {
-        continue;
-      }
-      node['skin'] = skinIndex;
+    // Process each mesh once. A mesh is skinned only when every primitive
+    // has valid POSITION data; assigning a skin to a partially processed mesh
+    // would produce an invalid glTF asset.
+    final skinnedMeshIndices = <int>{};
+    for (var meshIndex = 0; meshIndex < meshes.length; meshIndex++) {
       final mesh = meshes[meshIndex];
       if (mesh is! Map) continue;
-      for (final primitive in _list(mesh['primitives']).whereType<Map>()) {
+      final primitives = _list(mesh['primitives']);
+      if (primitives.isEmpty || primitives.any((item) => item is! Map)) continue;
+
+      final prepared = <(Map, List<List<double>>) >[];
+      var meshIsSkinnable = true;
+      for (final primitive in primitives.cast<Map>()) {
         final attributes = primitive['attributes'];
-        if (attributes is! Map || attributes['POSITION'] is! int) continue;
-        final positionAccessorIndex = attributes['POSITION'] as int;
-        final positions = _readPositions(
-          document,
-          parsed.binary,
-          positionAccessorIndex,
-        );
+        if (attributes is! Map || attributes['POSITION'] is! int) {
+          meshIsSkinnable = false;
+          break;
+        }
+        try {
+          final positions = _readPositions(
+            document,
+            parsed.binary,
+            attributes['POSITION'] as int,
+          );
+          prepared.add((primitive, positions));
+        } on FormatException {
+          meshIsSkinnable = false;
+          break;
+        }
+      }
+      if (!meshIsSkinnable || prepared.length != primitives.length) continue;
+
+      for (final entry in prepared) {
+        final primitive = entry.$1;
+        final positions = entry.$2;
+        final attributes = primitive['attributes'] as Map;
         final generated = _buildVertexWeights(positions, landmarks);
-        final jointAccessor = _appendAccessor(
+        attributes['JOINTS_0'] = _appendAccessor(
           document,
           binary,
           bufferViews,
@@ -182,7 +200,7 @@ class LocalGlbImportService {
           count: positions.length,
           type: 'VEC4',
         );
-        final weightAccessor = _appendAccessor(
+        attributes['WEIGHTS_0'] = _appendAccessor(
           document,
           binary,
           bufferViews,
@@ -192,14 +210,21 @@ class LocalGlbImportService {
           count: positions.length,
           type: 'VEC4',
         );
-        attributes['JOINTS_0'] = jointAccessor;
-        attributes['WEIGHTS_0'] = weightAccessor;
-        processedPrimitiveCount++;
+      }
+      skinnedMeshIndices.add(meshIndex);
+    }
+
+    for (final node in nodes.whereType<Map>()) {
+      final meshIndex = node['mesh'];
+      if (meshIndex is int && skinnedMeshIndices.contains(meshIndex)) {
+        node['skin'] = skinIndex;
       }
     }
 
-    if (processedPrimitiveCount == 0) {
-      throw const FormatException('لم يتم العثور على Mesh مرتبط بعقدة قابلة للـSkinning.');
+    if (skinnedMeshIndices.isEmpty) {
+      throw const FormatException(
+        'لم يتم العثور على Mesh يحتوي جميع primitives قابلة للـSkinning.',
+      );
     }
 
     final newBinary = binary.takeBytes();
