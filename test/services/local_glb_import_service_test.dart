@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gta6hub/services/local_glb_import_service.dart';
 
-Uint8List makeGlb({bool rigged = false}) {
+Uint8List makeGlb({bool rigged = false, int viewLength = 36}) {
   final positions = ByteData(36)
     ..setFloat32(0, -0.5, Endian.little)
     ..setFloat32(4, 0, Endian.little)
@@ -21,7 +21,7 @@ Uint8List makeGlb({bool rigged = false}) {
       {'byteLength': 36}
     ],
     'bufferViews': [
-      {'buffer': 0, 'byteOffset': 0, 'byteLength': 36}
+      {'buffer': 0, 'byteOffset': 0, 'byteLength': viewLength}
     ],
     'meshes': [
       {
@@ -137,6 +137,24 @@ void main() {
     expect(result.rigLandmarks.length, greaterThanOrEqualTo(15));
     expect(result.rigLandmarks.first.name, 'root');
     expect(result.rigLandmarks.any((point) => point.name == 'head'), isTrue);
+  });
+
+
+  test('rejects POSITION accessors that exceed their bufferView', () {
+    expect(
+      () => service.autoRig(makeGlb(viewLength: 12)),
+      throwsFormatException,
+    );
+  });
+
+  test('rejects non-finite POSITION components before generating weights', () {
+    final bytes = makeGlb();
+    final data = ByteData.sublistView(bytes);
+    final jsonLength = data.getUint32(12, Endian.little);
+    final binaryStart = 20 + jsonLength + 8;
+    data.setFloat32(binaryStart, double.nan, Endian.little);
+
+    expect(() => service.autoRig(bytes), throwsFormatException);
   });
 
   test('rejects invalid GLB headers', () {
