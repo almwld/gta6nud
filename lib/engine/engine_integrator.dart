@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vector_math/vector_math_64.dart' as v;
 import 'package:gta6hub/core/character_runtime_state.dart';
 import 'package:gta6hub/core/quality_settings.dart';
 import 'package:gta6hub/engine/body/body_renderer.dart';
@@ -8,41 +9,63 @@ import 'package:gta6hub/engine/physics/soft_body_physics.dart';
 import 'package:gta6hub/engine/physics/hair_physics.dart';
 import 'package:gta6hub/engine/physics/breast_physics.dart';
 import 'package:gta6hub/engine/physics/soft_body_contact_solver.dart';
+import 'package:gta6hub/engine/physics/multi_body_contact_solver.dart';
 import 'package:gta6hub/engine/physics/stable_mesh_buffer.dart';
 
 /// A pair of stable mesh buffers that should be kept apart by the contact solver.
 ///
-/// Buffers must contain world-space packed XYZ positions. The binding is
-/// evaluated once per fixed simulation step, after structural soft-body
-/// constraints and before animation/render consumers read the deformed data.
+/// Buffers contain packed XYZ positions. Supply both transforms for
+/// local-space meshes; omit both when buffers are already in world space.
+/// The binding runs once per fixed step after structural constraints.
 class SoftBodyContactBinding {
   const SoftBodyContactBinding({
     required this.first,
     required this.second,
     required this.contactThreshold,
+    this.firstTransform,
+    this.secondTransform,
     this.stiffness = 0.5,
     this.firstWeight = 0.5,
     this.secondWeight = 0.5,
     this.maxContacts = 20000,
-  });
+  }) : assert((firstTransform == null) == (secondTransform == null));
 
   final StableMeshBuffer first;
   final StableMeshBuffer second;
+  final v.Matrix4? firstTransform;
+  final v.Matrix4? secondTransform;
   final double contactThreshold;
   final double stiffness;
   final double firstWeight;
   final double secondWeight;
   final int maxContacts;
 
-  ContactSolveResult solve() => SoftBodyContactSolver.solveBuffers(
-        upper: first,
-        lower: second,
+  ContactSolveResult solve() {
+    final transformA = firstTransform;
+    final transformB = secondTransform;
+    if (transformA != null && transformB != null) {
+      return MultiBodyContactSolver.resolvePosesContact(
+        meshAPositions: first.currentPositions,
+        meshBPositions: second.currentPositions,
+        transformA: transformA,
+        transformB: transformB,
         contactThreshold: contactThreshold,
         stiffness: stiffness,
-        upperWeight: firstWeight,
-        lowerWeight: secondWeight,
+        weightA: firstWeight,
+        weightB: secondWeight,
         maxContacts: maxContacts,
       );
+    }
+    return SoftBodyContactSolver.solveBuffers(
+      upper: first,
+      lower: second,
+      contactThreshold: contactThreshold,
+      stiffness: stiffness,
+      upperWeight: firstWeight,
+      lowerWeight: secondWeight,
+      maxContacts: maxContacts,
+    );
+  }
 }
 
 /// Unified character presentation loop: fixed-step physics, animation and rendering.
