@@ -43,6 +43,9 @@ class SoftBodyContactBinding {
   ContactSolveResult solve() {
     final transformA = firstTransform;
     final transformB = secondTransform;
+    if ((transformA == null) != (transformB == null)) {
+      throw ArgumentError('Both mesh transforms must be supplied together.');
+    }
     if (transformA != null && transformB != null) {
       return MultiBodyContactSolver.resolvePosesContact(
         meshAPositions: first.currentPositions,
