@@ -4,7 +4,12 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gta6hub/services/local_glb_import_service.dart';
 
-Uint8List makeGlb({bool rigged = false, int viewLength = 36}) {
+Uint8List makeGlb({
+  bool rigged = false,
+  int viewLength = 36,
+  bool includeUnskinnablePrimitive = false,
+  bool duplicateMeshNode = false,
+}) {
   final positions = ByteData(36)
     ..setFloat32(0, -0.5, Endian.little)
     ..setFloat32(4, 0, Endian.little)
@@ -26,7 +31,8 @@ Uint8List makeGlb({bool rigged = false, int viewLength = 36}) {
     'meshes': [
       {
         'primitives': [
-          {'attributes': {'POSITION': 0}}
+          {'attributes': {'POSITION': 0}},
+          if (includeUnskinnablePrimitive) {'attributes': <String, dynamic>{}},
         ]
       }
     ],
@@ -41,7 +47,8 @@ Uint8List makeGlb({bool rigged = false, int viewLength = 36}) {
       }
     ],
     'nodes': [
-      {'name': 'Body', 'mesh': 0}
+      {'name': 'Body', 'mesh': 0},
+      if (duplicateMeshNode) {'name': 'BodyInstance', 'mesh': 0},
     ],
     'scenes': [
       {'nodes': [0]}
@@ -121,6 +128,26 @@ void main() {
     // The original mesh node remains at index 0; generated joints are appended.
     expect((nodes[0] as Map)['skin'], 0);
     expect(ByteData.sublistView(output).getUint32(8, Endian.little), output.length);
+  });
+
+
+  test('skins a shared mesh only once when multiple nodes reference it', () {
+    final output = service.autoRig(makeGlb(duplicateMeshNode: true));
+    final document = glbJson(output);
+    final accessors = document['accessors'] as List;
+    final nodes = document['nodes'] as List;
+
+    // POSITION, inverse-bind matrices, JOINTS_0 and WEIGHTS_0.
+    expect(accessors.length, 4);
+    expect((nodes[0] as Map)['skin'], 0);
+    expect((nodes[1] as Map)['skin'], 0);
+  });
+
+  test('rejects a mesh with an unskinnable primitive instead of assigning a partial skin', () {
+    expect(
+      () => service.autoRig(makeGlb(includeUnskinnablePrimitive: true)),
+      throwsFormatException,
+    );
   });
 
   test('does not replace a skin that already exists', () {
