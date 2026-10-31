@@ -35,7 +35,6 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
           candidates = [
               Path("android/app/build.gradle.kts"),
@@ -45,15 +44,19 @@ jobs:
           if target is None:
               raise SystemExit("Android app Gradle file was not generated.")
 
-          source = target.read_text()
-          updated, count = re.subn(
-              r"(?m)^([ \\t]*compileSdk(?:Version)?[ \\t]*(?:=[ \\t]*)?)(?:flutter\\.compileSdkVersion|[0-9]+)",
-              r"\\g<1>36",
-              source,
-          )
+          lines = target.read_text().splitlines()
+          count = 0
+          for index, line in enumerate(lines):
+              stripped = line.strip()
+              if stripped.startswith("compileSdk =") or stripped.startswith("compileSdkVersion "):
+                  indent = line[:len(line) - len(line.lstrip())]
+                  declaration = "compileSdk = 36" if target.suffix == ".kts" else "compileSdkVersion 36"
+                  lines[index] = indent + declaration
+                  count += 1
+                  break
           if count == 0:
               raise SystemExit(f"Could not locate compileSdk declaration in {target}.")
-          target.write_text(updated)
+          target.write_text("\n".join(lines) + "\n")
           print(f"Updated {target} to compileSdk 36.")
           PY
 
