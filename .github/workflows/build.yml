@@ -102,6 +102,33 @@ jobs:
         run: |
           mkdir -p assets/icons assets/icons/svg assets/images assets/fonts assets/audio
 
+      - name: 📱 Set Android compile SDK for current plugins
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          candidates = [
+              Path("android/app/build.gradle.kts"),
+              Path("android/app/build.gradle"),
+          ]
+          target = next((path for path in candidates if path.exists()), None)
+          if target is None:
+              raise SystemExit("Android app Gradle file was not generated.")
+
+          lines = target.read_text().splitlines()
+          for index, line in enumerate(lines):
+              stripped = line.strip()
+              if stripped.startswith("compileSdk =") or stripped.startswith("compileSdkVersion "):
+                  indent = line[:len(line) - len(line.lstrip())]
+                  declaration = "compileSdk = 36" if target.suffix == ".kts" else "compileSdkVersion 36"
+                  lines[index] = indent + declaration
+                  break
+          else:
+              raise SystemExit(f"Could not locate compileSdk declaration in {target}.")
+          target.write_text("\n".join(lines) + "\n")
+          print(f"Updated {target} to compileSdk 36.")
+          PY
+
       - name: 📦 Install Dependencies
         run: flutter pub get
 
