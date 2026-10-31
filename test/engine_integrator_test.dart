@@ -9,6 +9,7 @@ import 'package:gta6hub/engine/engine_integrator.dart';
 import 'package:gta6hub/engine/physics/breast_physics.dart';
 import 'package:gta6hub/engine/physics/hair_physics.dart';
 import 'package:gta6hub/engine/physics/soft_body_physics.dart';
+import 'package:gta6hub/engine/physics/stable_mesh_buffer.dart';
 
 void main() {
   test('EngineIntegrator updates all secondary physics systems each frame', () {
@@ -39,4 +40,38 @@ void main() {
     engine.physics.dispose();
     engine.runtime.dispose();
   });
+
+  test('EngineIntegrator resolves configured mesh contacts on fixed steps', () {
+    final first = StableMeshBuffer(Float32List.fromList([0, 0, 0]));
+    final second = StableMeshBuffer(Float32List.fromList([0.5, 0, 0]));
+    final runtime = CharacterRuntimeState();
+    final animation = BodyAnimationController();
+    final physics = BodyPhysicsController();
+    final engine = EngineIntegrator(
+      runtime: runtime,
+      renderer: BodyRenderer(),
+      animation: animation,
+      physics: physics,
+      contactBindings: [
+        SoftBodyContactBinding(
+          first: first,
+          second: second,
+          contactThreshold: 1,
+          stiffness: 1,
+        ),
+      ],
+    );
+
+    engine.update(EngineIntegrator.fixedTimeStep, const Size(800, 600));
+
+    final separation = (first.currentPositions[0] -
+            second.currentPositions[0])
+        .abs();
+    expect(separation, closeTo(1, 1e-5));
+
+    animation.dispose();
+    physics.dispose();
+    runtime.dispose();
+  });
+
 }
