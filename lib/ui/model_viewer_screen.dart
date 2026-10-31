@@ -63,7 +63,7 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
       final rig = imported.inspection;
       final message = rig.alreadyRigged
           ? 'تم استيراد المجسم والعثور على الهيكل العظمي.'
-          : 'تم الاستيراد. لم يوجد Skin؛ أُنشئ تحليل أولي لمواضع العظام فقط.';
+          : 'تم إنشاء هيكل عظمي وأوزان Skin تلقائياً للمجسم.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
@@ -288,7 +288,7 @@ class _ImportSummary extends StatelessWidget {
     final info = model.inspection;
     final rigText = info.alreadyRigged
         ? 'هيكل مدمج: ${info.jointCount} عظمة'
-        : 'بدون Skin — ${info.rigLandmarks.length} موضعاً تقديرياً';
+        : 'Auto-Rig — ${info.jointCount} عظمة';
     return Material(
       color: Colors.black.withOpacity(.78),
       borderRadius: BorderRadius.circular(12),
