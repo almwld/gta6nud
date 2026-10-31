@@ -9,6 +9,8 @@ Uint8List makeGlb({
   int viewLength = 36,
   bool includeUnskinnablePrimitive = false,
   bool duplicateMeshNode = false,
+  bool translatedMeshNode = false,
+  bool translatedAncestor = false,
 }) {
   final positions = ByteData(36)
     ..setFloat32(0, -0.5, Endian.little)
@@ -46,10 +48,19 @@ Uint8List makeGlb({
         'max': [0.5, 2.0, 0.2],
       }
     ],
-    'nodes': [
-      {'name': 'Body', 'mesh': 0},
-      if (duplicateMeshNode) {'name': 'BodyInstance', 'mesh': 0},
-    ],
+    'nodes': translatedAncestor
+        ? [
+            {'name': 'Root', 'translation': [1, 0, 0], 'children': [1]},
+            {'name': 'Body', 'mesh': 0},
+          ]
+        : [
+            {
+              'name': 'Body',
+              'mesh': 0,
+              if (translatedMeshNode) 'translation': [0.25, 0, 0],
+            },
+            if (duplicateMeshNode) {'name': 'BodyInstance', 'mesh': 0},
+          ],
     'scenes': [
       {'nodes': [0]}
     ],
@@ -146,6 +157,20 @@ void main() {
   test('rejects a mesh with an unskinnable primitive instead of assigning a partial skin', () {
     expect(
       () => service.autoRig(makeGlb(includeUnskinnablePrimitive: true)),
+      throwsFormatException,
+    );
+  });
+
+  test('rejects auto-rig when the mesh node has a non-identity transform', () {
+    expect(
+      () => service.autoRig(makeGlb(translatedMeshNode: true)),
+      throwsFormatException,
+    );
+  });
+
+  test('rejects auto-rig when a mesh ancestor has a non-identity transform', () {
+    expect(
+      () => service.autoRig(makeGlb(translatedAncestor: true)),
       throwsFormatException,
     );
   });
