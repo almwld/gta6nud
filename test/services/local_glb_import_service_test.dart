@@ -109,6 +109,7 @@ void main() {
     final skin = skins.single as Map;
 
     expect(inspection.alreadyRigged, isTrue);
+    expect(inspection.autoRigApplied, isTrue);
     expect(inspection.jointCount, 18);
     expect(skin['inverseBindMatrices'], isA<int>());
     expect((skin['joints'] as List).length, 18);
