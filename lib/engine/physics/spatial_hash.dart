@@ -27,8 +27,8 @@ class SpatialHash3D<T> {
   bool contains(T item) => _bounds.containsKey(item);
 
   void insert(T item, Aabb3 bounds) {
-    remove(item);
     final cells = _cellsFor(bounds);
+    remove(item);
     _bounds[item] = bounds;
     _itemCells[item] = cells;
     for (final cell in cells) {
@@ -66,12 +66,20 @@ class SpatialHash3D<T> {
   }
 
   List<_GridCell> _cellsFor(Aabb3 bounds) {
-    final minX = (bounds.minX / cellSize).floor();
-    final minY = (bounds.minY / cellSize).floor();
-    final minZ = (bounds.minZ / cellSize).floor();
-    final maxX = (bounds.maxX / cellSize).floor();
-    final maxY = (bounds.maxY / cellSize).floor();
-    final maxZ = (bounds.maxZ / cellSize).floor();
+    int index(double coordinate) {
+      final scaled = coordinate / cellSize;
+      if (!scaled.isFinite) {
+        throw ArgumentError('AABB coordinates exceed the spatial hash range.');
+      }
+      return scaled.floor();
+    }
+
+    final minX = index(bounds.minX);
+    final minY = index(bounds.minY);
+    final minZ = index(bounds.minZ);
+    final maxX = index(bounds.maxX);
+    final maxY = index(bounds.maxY);
+    final maxZ = index(bounds.maxZ);
     final nx = maxX - minX + 1;
     final ny = maxY - minY + 1;
     final nz = maxZ - minZ + 1;
