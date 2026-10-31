@@ -179,9 +179,9 @@ class _ImportSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final info = model.inspection;
     final rigStatus = info.autoRigApplied
-        ? 'Auto-Rig: JOINTS عظمية'
+        ? 'Auto-Rig: ' + info.jointCount.toString() + ' عظمة'
         : info.alreadyRigged
-            ? 'هيكل مدمج: JOINTS'
+            ? 'هيكل مدمج: ' + info.jointCount.toString() + ' عظمة'
             : 'لم يتم تجهيز Skin';
     return Material(
       color: Colors.black.withOpacity(.78),
