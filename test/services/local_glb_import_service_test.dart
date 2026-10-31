@@ -142,6 +142,42 @@ void main() {
   });
 
 
+  test('generates normalized vertex weights using valid bone indices', () {
+    final output = service.autoRig(makeGlb());
+    final document = glbJson(output);
+    final primitive = ((document['meshes'] as List).single as Map)['primitives'] as List;
+    final attributes = (primitive.single as Map)['attributes'] as Map;
+    final accessors = document['accessors'] as List;
+    final views = document['bufferViews'] as List;
+    final jointsAccessor = accessors[attributes['JOINTS_0'] as int] as Map;
+    final weightsAccessor = accessors[attributes['WEIGHTS_0'] as int] as Map;
+    final jointsView = views[jointsAccessor['bufferView'] as int] as Map;
+    final weightsView = views[weightsAccessor['bufferView'] as int] as Map;
+    final jsonLength = ByteData.sublistView(output).getUint32(12, Endian.little);
+    final binaryStart = 20 + jsonLength + 8;
+    final data = ByteData.sublistView(output);
+
+    for (var vertex = 0; vertex < 3; vertex++) {
+      var sum = 0.0;
+      for (var slot = 0; slot < 4; slot++) {
+        final jointOffset = binaryStart +
+            (jointsView['byteOffset'] as int? ?? 0) +
+            (jointsAccessor['byteOffset'] as int? ?? 0) +
+            (vertex * 4 + slot) * 2;
+        final weightOffset = binaryStart +
+            (weightsView['byteOffset'] as int? ?? 0) +
+            (weightsAccessor['byteOffset'] as int? ?? 0) +
+            (vertex * 4 + slot) * 4;
+        expect(data.getUint16(jointOffset, Endian.little), lessThan(18));
+        final weight = data.getFloat32(weightOffset, Endian.little);
+        expect(weight.isFinite, isTrue);
+        expect(weight, greaterThanOrEqualTo(0));
+        sum += weight;
+      }
+      expect(sum, closeTo(1.0, 1e-5));
+    }
+  });
+
   test('skins a shared mesh only once when multiple nodes reference it', () {
     final output = service.autoRig(makeGlb(duplicateMeshNode: true));
     final document = glbJson(output);
