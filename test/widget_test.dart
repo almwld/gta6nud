@@ -1,21 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
-import 'package:gta6hub/core/simulation_provider.dart';
-import 'package:gta6hub/engine/body/body_manager.dart';
 import 'package:gta6hub/main.dart';
 
 void main() {
-  testWidgets('GTA6 app boots with its runtime providers', (tester) async {
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => SimulationProvider()),
-          ChangeNotifierProvider(create: (_) => BodyManager()),
-        ],
-        child: const GTA6App(),
-      ),
-    );
-    await tester.pump();
+  testWidgets('GTA6 app boots into the local GLB workspace', (tester) async {
+    await tester.pumpWidget(const GTA6App());
+
     expect(find.byType(GTA6App), findsOneWidget);
+    expect(find.text('مساحة المجسمات ثلاثية الأبعاد'), findsOneWidget);
+    expect(find.text('اختيار ملف GLB'), findsOneWidget);
+    expect(find.text('SPEED+'), findsNothing);
+    expect(find.text('SPEED-'), findsNothing);
+    expect(find.text('Walk'), findsNothing);
+    expect(find.text('Run'), findsNothing);
   });
 }
