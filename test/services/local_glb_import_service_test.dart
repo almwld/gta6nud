@@ -137,8 +137,8 @@ void main() {
     final accessors = document['accessors'] as List;
     final nodes = document['nodes'] as List;
 
-    // One POSITION accessor plus one JOINTS_0 and one WEIGHTS_0 accessor.
-    expect(accessors.length, 3);
+    // POSITION, inverse-bind matrices, JOINTS_0 and WEIGHTS_0.
+    expect(accessors.length, 4);
     expect((nodes[0] as Map)['skin'], 0);
     expect((nodes[1] as Map)['skin'], 0);
   });
