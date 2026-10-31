@@ -437,21 +437,38 @@ class LocalGlbImportService {
       throw const FormatException('ملفات GLB ذات مخازن هندسية متعددة غير مدعومة.');
     }
     final count = accessor['count'] as int;
-    final stride = (view['byteStride'] as int?) ?? 12;
-    final start = (view['byteOffset'] as int? ?? 0) +
-        (accessor['byteOffset'] as int? ?? 0);
-    if (count <= 0 || stride < 12 || start < 0 ||
-        start + (count - 1) * stride + 12 > binary.length) {
-      throw const FormatException('بيانات POSITION ناقصة أو خارج حدود BIN.');
+    final viewStart = view['byteOffset'] as int? ?? 0;
+    final viewLength = view['byteLength'] as int?;
+    final accessorOffset = accessor['byteOffset'] as int? ?? 0;
+    final stride = view['byteStride'] as int? ?? 12;
+    final start = viewStart + accessorOffset;
+    if (viewLength == null ||
+        count <= 0 ||
+        stride < 12 ||
+        stride > 252 ||
+        stride % 4 != 0 ||
+        viewStart < 0 ||
+        accessorOffset < 0 ||
+        viewLength < 0 ||
+        viewStart + viewLength > binary.length ||
+        start < viewStart ||
+        start + (count - 1) * stride + 12 > viewStart + viewLength) {
+      throw const FormatException(
+        'بيانات POSITION ناقصة أو تتجاوز حدود bufferView/BIN.',
+      );
     }
     final data = ByteData.sublistView(binary);
     return List.generate(count, (i) {
       final offset = start + i * stride;
-      return [
+      final position = [
         data.getFloat32(offset, Endian.little),
         data.getFloat32(offset + 4, Endian.little),
         data.getFloat32(offset + 8, Endian.little),
       ];
+      if (position.any((component) => !component.isFinite)) {
+        throw const FormatException('بيانات POSITION تحتوي قيمة غير منتهية.');
+      }
+      return position;
     });
   }
 
