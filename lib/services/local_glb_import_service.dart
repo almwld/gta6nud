@@ -197,7 +197,7 @@ class LocalGlbImportService {
         .any((extent) => !extent.isFinite || extent <= 0)) {
       return null;
     }
-    return {'min': minimum, 'max': maximum};
+    return {'min': minimum!, 'max': maximum!};
   }
 
   List<RigLandmark> _humanoidLandmarks(Map<String, List<double>> bounds) {
@@ -207,7 +207,6 @@ class LocalGlbImportService {
     final centerZ = (min[2] + max[2]) / 2;
     final height = max[1] - min[1];
     final width = max[0] - min[0];
-    final depth = max[2] - min[2];
     RigLandmark point(String name, double x, double y, double z) =>
         RigLandmark(name: name, x: x, y: y, z: z);
     return [
