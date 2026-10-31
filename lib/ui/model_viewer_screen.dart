@@ -30,7 +30,8 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
 
   @override
   void dispose() {
-    _controller.stopRotation();
+    // The viewer may never have loaded a model (the workspace starts empty).
+    // Calling controller methods before onLoad throws in flutter_3d_controller.
     super.dispose();
   }
 
