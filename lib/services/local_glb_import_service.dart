@@ -75,6 +75,12 @@ class LocalGlbImportService {
   static const int _binChunk = 0x004E4942;
   static const int _glbMagic = 0x46546C67;
 
+  static const Map<int, int> _jointParents = {
+    1: 0, 2: 1, 3: 2, 4: 3, 5: 4,
+    6: 3, 7: 3, 8: 6, 9: 7, 10: 8, 11: 9,
+    12: 1, 13: 1, 14: 12, 15: 13, 16: 14, 17: 15,
+  };
+
   Future<ImportedGlb?> pickAndImport() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -121,6 +127,12 @@ class LocalGlbImportService {
     final skins = _list(document['skins']);
     document['skins'] = skins;
     if (skins.isNotEmpty) return Uint8List.fromList(bytes);
+
+    // Auto-generated joints are placed in scene space. Refuse to bind a mesh
+    // whose node or any ancestor applies a transform, because sharing one
+    // generated skin across differently transformed instances would produce
+    // incorrect inverse-bind matrices and visible offsets.
+    _validateMeshNodeTransforms(document, meshes);
 
     final bounds = _positionBounds(document);
     if (bounds == null) {
@@ -308,6 +320,82 @@ class LocalGlbImportService {
     return _ParsedGlb(document, binary, other);
   }
 
+  void _validateMeshNodeTransforms(
+    Map<String, dynamic> document,
+    List<dynamic> meshes,
+  ) {
+    final nodes = _list(document['nodes']);
+    final parents = <int, int>{};
+    for (var parentIndex = 0; parentIndex < nodes.length; parentIndex++) {
+      final node = nodes[parentIndex];
+      if (node is! Map) continue;
+      for (final child in _list(node['children'])) {
+        if (child is int && child >= 0 && child < nodes.length) {
+          parents[child] = parentIndex;
+        }
+      }
+    }
+
+    for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+      final node = nodes[nodeIndex];
+      if (node is! Map) continue;
+      final meshIndex = node['mesh'];
+      if (meshIndex is! int || meshIndex < 0 || meshIndex >= meshes.length) {
+        continue;
+      }
+      var currentIndex = nodeIndex;
+      final visited = <int>{};
+      while (visited.add(currentIndex)) {
+        final current = nodes[currentIndex];
+        if (current is Map && _hasNonIdentityTransform(current)) {
+          throw const FormatException(
+            'Auto-Rig يتطلب Mesh بعقدة وتحويلات آباء Identity؛ طبّع Transform للمجسم قبل الاستيراد.',
+          );
+        }
+        final parentIndex = parents[currentIndex];
+        if (parentIndex == null) break;
+        currentIndex = parentIndex;
+      }
+    }
+  }
+
+  bool _hasNonIdentityTransform(Map node) {
+    final matrix = node['matrix'];
+    if (matrix != null) {
+      if (matrix is! List || matrix.length != 16) return true;
+      const identity = <double>[
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1,
+      ];
+      for (var i = 0; i < identity.length; i++) {
+        final value = matrix[i];
+        if (value is! num || !value.isFinite ||
+            (value.toDouble() - identity[i]).abs() > 1e-6) {
+          return true;
+        }
+      }
+    }
+
+    bool matches(dynamic value, List<double> expected) {
+      if (value == null) return true;
+      if (value is! List || value.length != expected.length) return false;
+      for (var i = 0; i < expected.length; i++) {
+        final component = value[i];
+        if (component is! num || !component.isFinite ||
+            (component.toDouble() - expected[i]).abs() > 1e-6) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    return !matches(node['translation'], const [0, 0, 0]) ||
+        !matches(node['rotation'], const [0, 0, 0, 1]) ||
+        !matches(node['scale'], const [1, 1, 1]);
+  }
+
   List<int> _appendJointHierarchy(
     Map<String, dynamic> document,
     List<RigLandmark> bones,
@@ -319,11 +407,7 @@ class LocalGlbImportService {
       4: [5], 6: [8], 8: [10], 7: [9], 9: [11],
       12: [14], 13: [15], 14: [16], 15: [17],
     };
-    final parents = <int, int>{
-      1: 0, 2: 1, 3: 2, 4: 3, 5: 4,
-      6: 3, 7: 3, 8: 6, 9: 7, 10: 8, 11: 9,
-      12: 1, 13: 1, 14: 12, 15: 13, 16: 14, 17: 15,
-    };
+    final parents = _jointParents;
     for (var i = 0; i < bones.length; i++) {
       final translation = i == 0
           ? bones[i].vector
@@ -380,13 +464,25 @@ class LocalGlbImportService {
     final jointData = ByteData.sublistView(jointBytes);
     final weightData = ByteData.sublistView(weightBytes);
     for (var vertex = 0; vertex < positions.length; vertex++) {
+      // Weight vertices against bone segments rather than isolated joints.
+      // This avoids abrupt influence changes around elbows, knees and ankles.
+      double boneDistance(int index) {
+        if (index == 0) {
+          return _distanceSquared(positions[vertex], bones[index].vector);
+        }
+        final parent = _jointParents[index]!;
+        return _distanceToSegmentSquared(
+          positions[vertex],
+          bones[parent].vector,
+          bones[index].vector,
+        );
+      }
+
       final ranked = List<int>.generate(bones.length, (i) => i)
-        ..sort((a, b) => _distanceSquared(positions[vertex], bones[a].vector)
-            .compareTo(_distanceSquared(positions[vertex], bones[b].vector)));
+        ..sort((a, b) => boneDistance(a).compareTo(boneDistance(b)));
       final selected = ranked.take(4).toList();
       final raw = selected
-          .map((index) => 1.0 /
-              math.max(1e-8, _distanceSquared(positions[vertex], bones[index].vector)))
+          .map((index) => 1.0 / math.max(1e-8, boneDistance(index)))
           .toList();
       final total = raw.fold<double>(0, (sum, value) => sum + value);
       for (var slot = 0; slot < 4; slot++) {
@@ -608,6 +704,30 @@ class LocalGlbImportService {
       math.pow(a[0] - b[0], 2).toDouble() +
       math.pow(a[1] - b[1], 2).toDouble() +
       math.pow(a[2] - b[2], 2).toDouble();
+
+  double _distanceToSegmentSquared(
+    List<double> point,
+    List<double> start,
+    List<double> end,
+  ) {
+    final segment = _subtract(end, start);
+    final offset = _subtract(point, start);
+    final lengthSquared = segment[0] * segment[0] +
+        segment[1] * segment[1] +
+        segment[2] * segment[2];
+    if (lengthSquared <= 1e-12) return _distanceSquared(point, start);
+    final projection = ((offset[0] * segment[0]) +
+            (offset[1] * segment[1]) +
+            (offset[2] * segment[2])) /
+        lengthSquared;
+    final t = projection.clamp(0.0, 1.0).toDouble();
+    final closest = <double>[
+      start[0] + segment[0] * t,
+      start[1] + segment[1] * t,
+      start[2] + segment[2] * t,
+    ];
+    return _distanceSquared(point, closest);
+  }
 
   String _safeFileName(String name) {
     final cleaned = name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');

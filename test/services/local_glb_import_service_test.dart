@@ -9,6 +9,8 @@ Uint8List makeGlb({
   int viewLength = 36,
   bool includeUnskinnablePrimitive = false,
   bool duplicateMeshNode = false,
+  bool translatedMeshNode = false,
+  bool translatedAncestor = false,
 }) {
   final positions = ByteData(36)
     ..setFloat32(0, -0.5, Endian.little)
@@ -46,10 +48,19 @@ Uint8List makeGlb({
         'max': [0.5, 2.0, 0.2],
       }
     ],
-    'nodes': [
-      {'name': 'Body', 'mesh': 0},
-      if (duplicateMeshNode) {'name': 'BodyInstance', 'mesh': 0},
-    ],
+    'nodes': translatedAncestor
+        ? [
+            {'name': 'Root', 'translation': [1, 0, 0], 'children': [1]},
+            {'name': 'Body', 'mesh': 0},
+          ]
+        : [
+            {
+              'name': 'Body',
+              'mesh': 0,
+              if (translatedMeshNode) 'translation': [0.25, 0, 0],
+            },
+            if (duplicateMeshNode) {'name': 'BodyInstance', 'mesh': 0},
+          ],
     'scenes': [
       {'nodes': [0]}
     ],
@@ -131,6 +142,42 @@ void main() {
   });
 
 
+  test('generates normalized vertex weights using valid bone indices', () {
+    final output = service.autoRig(makeGlb());
+    final document = glbJson(output);
+    final primitive = ((document['meshes'] as List).single as Map)['primitives'] as List;
+    final attributes = (primitive.single as Map)['attributes'] as Map;
+    final accessors = document['accessors'] as List;
+    final views = document['bufferViews'] as List;
+    final jointsAccessor = accessors[attributes['JOINTS_0'] as int] as Map;
+    final weightsAccessor = accessors[attributes['WEIGHTS_0'] as int] as Map;
+    final jointsView = views[jointsAccessor['bufferView'] as int] as Map;
+    final weightsView = views[weightsAccessor['bufferView'] as int] as Map;
+    final jsonLength = ByteData.sublistView(output).getUint32(12, Endian.little);
+    final binaryStart = 20 + jsonLength + 8;
+    final data = ByteData.sublistView(output);
+
+    for (var vertex = 0; vertex < 3; vertex++) {
+      var sum = 0.0;
+      for (var slot = 0; slot < 4; slot++) {
+        final jointOffset = binaryStart +
+            (jointsView['byteOffset'] as int? ?? 0) +
+            (jointsAccessor['byteOffset'] as int? ?? 0) +
+            (vertex * 4 + slot) * 2;
+        final weightOffset = binaryStart +
+            (weightsView['byteOffset'] as int? ?? 0) +
+            (weightsAccessor['byteOffset'] as int? ?? 0) +
+            (vertex * 4 + slot) * 4;
+        expect(data.getUint16(jointOffset, Endian.little), lessThan(18));
+        final weight = data.getFloat32(weightOffset, Endian.little);
+        expect(weight.isFinite, isTrue);
+        expect(weight, greaterThanOrEqualTo(0));
+        sum += weight;
+      }
+      expect(sum, closeTo(1.0, 1e-5));
+    }
+  });
+
   test('skins a shared mesh only once when multiple nodes reference it', () {
     final output = service.autoRig(makeGlb(duplicateMeshNode: true));
     final document = glbJson(output);
@@ -146,6 +193,20 @@ void main() {
   test('rejects a mesh with an unskinnable primitive instead of assigning a partial skin', () {
     expect(
       () => service.autoRig(makeGlb(includeUnskinnablePrimitive: true)),
+      throwsFormatException,
+    );
+  });
+
+  test('rejects auto-rig when the mesh node has a non-identity transform', () {
+    expect(
+      () => service.autoRig(makeGlb(translatedMeshNode: true)),
+      throwsFormatException,
+    );
+  });
+
+  test('rejects auto-rig when a mesh ancestor has a non-identity transform', () {
+    expect(
+      () => service.autoRig(makeGlb(translatedAncestor: true)),
       throwsFormatException,
     );
   });
