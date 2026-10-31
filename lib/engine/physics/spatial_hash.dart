@@ -52,7 +52,7 @@ class SpatialHash3D<T> {
   List<T> query(Aabb3 query) {
     final candidates = <T>{};
     for (final cell in _cellsFor(query)) {
-      candidates.addAll(_buckets[cell] ?? const <T>{});
+      candidates.addAll(_buckets[cell] ?? <T>{});
     }
     return candidates
         .where((item) => _bounds[item]!.overlaps(query))
