@@ -122,6 +122,12 @@ class LocalGlbImportService {
     document['skins'] = skins;
     if (skins.isNotEmpty) return Uint8List.fromList(bytes);
 
+    // Auto-generated joints are placed in scene space. Refuse to bind a mesh
+    // whose node or any ancestor applies a transform, because sharing one
+    // generated skin across differently transformed instances would produce
+    // incorrect inverse-bind matrices and visible offsets.
+    _validateMeshNodeTransforms(document, meshes);
+
     final bounds = _positionBounds(document);
     if (bounds == null) {
       throw const FormatException(
@@ -306,6 +312,82 @@ class LocalGlbImportService {
     }
     if (document == null) throw const FormatException('لم يتم العثور على JSON chunk.');
     return _ParsedGlb(document, binary, other);
+  }
+
+  void _validateMeshNodeTransforms(
+    Map<String, dynamic> document,
+    List<dynamic> meshes,
+  ) {
+    final nodes = _list(document['nodes']);
+    final parents = <int, int>{};
+    for (var parentIndex = 0; parentIndex < nodes.length; parentIndex++) {
+      final node = nodes[parentIndex];
+      if (node is! Map) continue;
+      for (final child in _list(node['children'])) {
+        if (child is int && child >= 0 && child < nodes.length) {
+          parents[child] = parentIndex;
+        }
+      }
+    }
+
+    for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+      final node = nodes[nodeIndex];
+      if (node is! Map) continue;
+      final meshIndex = node['mesh'];
+      if (meshIndex is! int || meshIndex < 0 || meshIndex >= meshes.length) {
+        continue;
+      }
+      var currentIndex = nodeIndex;
+      final visited = <int>{};
+      while (visited.add(currentIndex)) {
+        final current = nodes[currentIndex];
+        if (current is Map && _hasNonIdentityTransform(current)) {
+          throw const FormatException(
+            'Auto-Rig يتطلب Mesh بعقدة وتحويلات آباء Identity؛ طبّع Transform للمجسم قبل الاستيراد.',
+          );
+        }
+        final parentIndex = parents[currentIndex];
+        if (parentIndex == null) break;
+        currentIndex = parentIndex;
+      }
+    }
+  }
+
+  bool _hasNonIdentityTransform(Map node) {
+    final matrix = node['matrix'];
+    if (matrix != null) {
+      if (matrix is! List || matrix.length != 16) return true;
+      const identity = <double>[
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1,
+      ];
+      for (var i = 0; i < identity.length; i++) {
+        final value = matrix[i];
+        if (value is! num || !value.isFinite ||
+            (value.toDouble() - identity[i]).abs() > 1e-6) {
+          return true;
+        }
+      }
+    }
+
+    bool matches(dynamic value, List<double> expected) {
+      if (value == null) return true;
+      if (value is! List || value.length != expected.length) return false;
+      for (var i = 0; i < expected.length; i++) {
+        final component = value[i];
+        if (component is! num || !component.isFinite ||
+            (component.toDouble() - expected[i]).abs() > 1e-6) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    return !matches(node['translation'], const [0, 0, 0]) ||
+        !matches(node['rotation'], const [0, 0, 0, 1]) ||
+        !matches(node['scale'], const [1, 1, 1]);
   }
 
   List<int> _appendJointHierarchy(
