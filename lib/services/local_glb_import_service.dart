@@ -119,6 +119,7 @@ class LocalGlbImportService {
     final nodes = _list(document['nodes']);
     document['nodes'] = nodes;
     final skins = _list(document['skins']);
+    document['skins'] = skins;
     if (skins.isNotEmpty) return Uint8List.fromList(bytes);
 
     final bounds = _positionBounds(document);
@@ -144,8 +145,8 @@ class LocalGlbImportService {
       type: 'MAT4',
     );
 
-    final skinIndex = _list(document['skins']).length;
-    _list(document['skins']).add({
+    final skinIndex = skins.length;
+    skins.add({
       'name': 'AutoRig_Humanoid',
       'inverseBindMatrices': inverseBindAccessor,
       'skeleton': jointNodes.first,
@@ -203,6 +204,7 @@ class LocalGlbImportService {
 
     final newBinary = binary.takeBytes();
     final buffers = _list(document['buffers']);
+    document['buffers'] = buffers;
     if (buffers.isEmpty) {
       buffers.add({'byteLength': newBinary.length});
     } else {
