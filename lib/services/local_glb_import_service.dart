@@ -720,7 +720,7 @@ class LocalGlbImportService {
             (offset[1] * segment[1]) +
             (offset[2] * segment[2])) /
         lengthSquared;
-    final t = projection.clamp(0.0, 1.0);
+    final t = projection.clamp(0.0, 1.0).toDouble();
     final closest = <double>[
       start[0] + segment[0] * t,
       start[1] + segment[1] * t,
